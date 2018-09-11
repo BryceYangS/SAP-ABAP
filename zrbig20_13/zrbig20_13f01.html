@@ -1,0 +1,111 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>ZRBIG20_13F01</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for: ZRBIG20_13F01</b></font>
+<hr>
+<pre width="100">
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&  Include           ZRBIG20_13F01</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&      Form  SET_INIT_VALUE</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*       text</font>
+<font color ="#0000FF">*----------------------------------------------------------------------*</font>
+<font color ="#0000FF">*  --&gt;  p1        text</font>
+<font color ="#0000FF">*  &lt;--  p2        text</font>
+<font color ="#0000FF">*----------------------------------------------------------------------*</font>
+FORM set_init_value .
+
+  p_carrid = 'AA'.
+
+  gv_text = 'Á¶È¸'.
+  LOOP AT SCREEN.
+    IF screen-group1 EQ 'CAR'.
+      screen-active = 0.
+      MODIFY SCREEN.
+    ELSEIF screen-group1 EQ 'CON'.
+      screen-active = 0.
+      MODIFY SCREEN.
+    ENDIF.
+  ENDLOOP.
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&      Form  DISPLAY_DATA</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*       text</font>
+<font color ="#0000FF">*----------------------------------------------------------------------*</font>
+<font color ="#0000FF">*  --&gt;  p1        text</font>
+<font color ="#0000FF">*  &lt;--  p2        text</font>
+<font color ="#0000FF">*----------------------------------------------------------------------*</font>
+FORM display_data .
+
+  LOOP AT gt_airline INTO gs_airline.
+    WRITE :/
+        gs_airline-carrid,    gs_airline-connid,    gs_airline-fldate,
+        gs_airline-customid,  gs_airline-cityfrom,  gs_airline-cityto.
+
+  ENDLOOP.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&      Form  GET_DATA</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*       text</font>
+<font color ="#0000FF">*----------------------------------------------------------------------*</font>
+<font color ="#0000FF">*  --&gt;  p1        text</font>
+<font color ="#0000FF">*  &lt;--  p2        text</font>
+<font color ="#0000FF">*----------------------------------------------------------------------*</font>
+FORM get_data .
+ CLEAR : gt_spfli, gs_spfli.
+
+  SELECT *
+    INTO CORRESPONDING FIELDS OF TABLE gt_spfli
+    FROM spfli
+    WHERE carrid EQ p_carrid
+    AND   connid IN s_connid.
+
+  IF sy-subrc NE 0.
+    MESSAGE s037 DISPLAY LIKE 'E'.
+    STOP.
+  ENDIF.
+
+  SORT gt_spfli BY carrid connid.
+
+  gt_spfliBackup = gt_spfli.
+
+  DELETE ADJACENT DUPLICATES FROM gt_spfli COMPARING carrid connid.
+
+  CLEAR : gt_sbook, gs_sbook.
+
+  SELECT *
+    INTO CORRESPONDING FIELDS OF TABLE gt_sbook
+    FROM sbook FOR ALL ENTRIES IN gt_spfli
+    WHERE carrid EQ gt_spfli-carrid
+    AND   connid EQ gt_spfli-connid
+    AND   fldate IN s_connid.
+
+  LOOP AT gt_spfli INTO gs_spfli.
+    LOOP AT gt_sbook INTO gs_sbook WHERE carrid EQ gs_spfli-carrid
+                                   AND   connid EQ gs_spfli-connid.
+      gs_airline-carrid   = gs_sbook-carrid.
+      gs_airline-connid   = gs_sbook-connid.
+      gs_airline-fldate   = gs_sbook-connid.
+      gs_airline-customid = gs_sbook-customid.
+      gs_airline-cityfrom = gs_spfli-cityfrom.
+      gs_airline-cityto   = gs_spfli-cityto.
+      APPEND gs_airline TO gt_airline.
+      CLEAR  gs_airline.
+    ENDLOOP.
+
+  ENDLOOP.
+ENDFORM.
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750
+</font>
+</body>
+</html>

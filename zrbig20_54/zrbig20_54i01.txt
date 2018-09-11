@@ -1,0 +1,47 @@
+*&---------------------------------------------------------------------*
+*&  Include           ZRBIG20_54I01
+*&---------------------------------------------------------------------*
+*&---------------------------------------------------------------------*
+*&      Module  EXIT_100  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE exit_100 INPUT.
+  CASE gv_okcode.
+    WHEN 'BACK' OR 'EXIT' OR 'CANC'.
+      CALL METHOD : go_alv_grid->free,
+                    go_container->free.
+      FREE : go_alv_grid , go_container.
+
+      LEAVE TO SCREEN 0.
+  ENDCASE.
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Module  SAVE_DATA  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE save_data INPUT.
+  CASE gv_okcode.
+    WHEN 'SAVE'.
+      PERFORM save_data.
+  ENDCASE.
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Module  EXIT_110  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE exit_110 INPUT.
+  CASE gv_okcode.
+    WHEN 'BACK' OR 'CANC' OR 'EXIT'.
+      CALL METHOD : go_pop_grid->free,
+                    go_pop_con->free.
+      FREE : go_pop_con, go_pop_grid.
+
+      LEAVE TO SCREEN 0.
+  ENDCASE.
+ENDMODULE.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

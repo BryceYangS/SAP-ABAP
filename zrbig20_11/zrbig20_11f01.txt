@@ -1,0 +1,162 @@
+*&---------------------------------------------------------------------*
+*&  Include           ZRBIG20_11F01
+*&---------------------------------------------------------------------*
+*&---------------------------------------------------------------------*
+*&      Form  SET_INIT_VALUE
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM set_init_value .
+
+  p_carrid = 'LH'.
+
+  LOOP AT SCREEN.
+    IF screen-group1 EQ 'CAR'.
+      screen-input  = 0.
+    ENDIF.
+    MODIFY SCREEN.
+  ENDLOOP.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  GET_AIR_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM get_air_data .
+
+  CLEAR : gs_airline, gt_airline.
+
+  SELECT a~carrid connid carrname price planetype url
+    INTO CORRESPONDING FIELDS OF TABLE gt_airline
+    FROM scarr AS a INNER JOIN sflight AS b
+    ON    a~carrid EQ b~carrid
+    WHERE a~carrid EQ p_carrid
+    AND   connid   IN s_connid.
+
+  IF gt_airline IS INITIAL.
+    MESSAGE s037 DISPLAY LIKE 'E'.
+    STOP.
+  ELSE.
+    MESSAGE s001 WITH TEXT-s01 sy-dbcnt TEXT-s02.
+  ENDIF.
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  DISPLAY_AIR_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM display_air_data .
+
+  LOOP AT gt_airline INTO gs_airline.
+
+    WRITE :/
+      gs_airline-carrid, gs_airline-connid,     gs_airline-carrname,
+      gs_airline-price,  gs_airline-planetype,  gs_airline-url.
+
+  ENDLOOP.
+
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  GET_BOOK_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM get_book_data .
+
+  CLEAR : gs_spfli, gt_spfli.
+
+  SELECT *
+    INTO CORRESPONDING FIELDS OF TABLE gt_spfli
+    FROM spfli
+    WHERE carrid EQ p_carrid
+    AND   connid IN s_connid.
+
+  IF gt_spfli IS INITIAL.
+    MESSAGE s037 DISPLAY LIKE 'E'.
+    STOP.
+  ENDIF.
+
+  SORT gt_spfli BY carrid connid ASCENDING.
+
+  DELETE ADJACENT DUPLICATES FROM gt_spfli COMPARING carrid connid.
+
+  CLEAR : gs_sbook, gt_sbook.
+
+  SELECT *
+    INTO CORRESPONDING FIELDS OF TABLE gt_sbook
+    FROM sbook FOR ALL ENTRIES IN gt_spfli
+    WHERE carrid EQ gt_spfli-carrid
+    AND   connid EQ gt_spfli-connid.
+
+  IF gt_sbook IS INITIAL.
+    MESSAGE s037 DISPLAY LIKE 'E'.
+  ELSE.
+    MESSAGE s001 WITH TEXT-s01 sy-dbcnt TEXT-s02.
+  ENDIF.
+
+  CLEAR : gs_booking, gt_booking.
+  LOOP AT gt_spfli INTO gs_spfli.
+
+    LOOP AT gt_sbook INTO gs_sbook WHERE carrid EQ gs_spfli-carrid
+                                   AND   connid EQ gs_spfli-connid.
+      gs_booking-carrid    = gs_sbook-carrid.
+      gs_booking-connid    = gs_sbook-connid.
+      gs_booking-cityfrom  = gs_spfli-cityfrom.
+      gs_booking-cityto    = gs_spfli-cityto.
+      gs_booking-customid   = gs_sbook-customid.
+      gs_booking-wunit     = gs_sbook-wunit.
+      APPEND gs_booking TO gt_booking.
+      CLEAR  gs_booking.
+    ENDLOOP.
+
+  ENDLOOP.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  DISPLAY_BOOK_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM display_book_data .
+
+  LOOP AT gt_booking INTO gs_booking.
+
+    WRITE:/
+      gs_booking-carrid, gs_booking-connid,   gs_booking-cityfrom,
+      gs_booking-cityto, gs_booking-customid, gs_booking-wunit.
+
+  ENDLOOP.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  MANIPULATE_SCREEN
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM manipulate_screen .
+
+
+ENDFORM.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

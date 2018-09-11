@@ -1,0 +1,191 @@
+*&---------------------------------------------------------------------*
+*&  Include           ZRBIG20_64F01
+*&---------------------------------------------------------------------*
+*&---------------------------------------------------------------------*
+*&      Form  DISPLAY_SCREEN
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM display_screen .
+
+  PERFORM set_layo.
+
+  CLEAR : gs_fcat, gt_fcat.
+  PERFORM set_fcat USING  :
+        "pk "filedname
+        'X' 'LINE',
+        'X' 'NAME',
+        ' ' 'ERDAT',
+        ' ' 'ERNAM',
+        ' ' 'ERZET',
+        ' ' 'AEDAT',
+        ' ' 'AENAM',
+        ' ' 'AEZET'.
+
+  IF go_container IS INITIAL.
+
+    PERFORM create_obj.
+
+    CALL METHOD go_alv_grid->set_table_for_first_display
+      EXPORTING
+        i_structure_name              = 'ZTBIG20_23'
+        i_save                        = 'A'
+        i_default                     = 'X'
+        is_layout                     = gs_layo
+      CHANGING
+        it_outtab                     = gt_elv
+        it_fieldcatalog               = gt_fcat
+*       it_sort                       =
+*       it_filter                     =
+      EXCEPTIONS
+        invalid_parameter_combination = 1
+        program_error                 = 2
+        too_many_lines                = 3
+        OTHERS                        = 4.
+  ELSE.
+    CALL METHOD go_alv_grid->refresh_table_display.
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SET_LAYO
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM set_layo .
+
+  CLEAR : gs_layo.
+  gs_layo-zebra       = 'X'.
+  gs_layo-cwidth_opt  = 'X'.
+  gs_layo-sel_mode    = 'D'.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  CREATE_OBJ
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM create_obj .
+
+  CREATE OBJECT go_container
+    EXPORTING
+      repid     = sy-repid
+      dynnr     = sy-dynnr
+      side      = go_container->dock_at_left
+      extension = 3000.
+
+  CREATE OBJECT go_alv_grid
+    EXPORTING
+      i_parent = go_container.
+
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SAVE_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM save_data .
+
+  DATA : lt_save   LIKE gt_elv,
+         ls_save   TYPE ztbig20_23,
+         ls_check  TYPE ztbig20_23,
+         lt_check  TYPE TABLE OF ztbig20_23,
+         lv_answer.
+
+  CALL FUNCTION 'POPUP_TO_CONFIRM'
+    EXPORTING
+      titlebar              = 'Data save'
+*     DIAGNOSE_OBJECT       = ' '
+      text_question         = 'Save data gogo?'
+      text_button_1         = 'Ja'(001)
+*     ICON_BUTTON_1         = ' '
+      text_button_2         = 'Nein'(002)
+*     ICON_BUTTON_2         = ' '
+*     DEFAULT_BUTTON        = '1'
+      display_cancel_button = 'X'
+    IMPORTING
+      answer                = lv_answer.
+
+  IF lv_answer NE '1'.
+    STOP.
+  ENDIF.
+
+  CLEAR : lt_check.
+  SELECT *
+    INTO CORRESPONDING FIELDS OF TABLE lt_check
+    FROM ztbig20_23.
+
+  CLEAR : gs_elv, lt_save.
+  LOOP AT gt_elv INTO gs_elv.
+
+    CLEAR : ls_save.
+    MOVE-CORRESPONDING gs_elv TO ls_save.
+
+    CLEAR : ls_check.
+    READ TABLE lt_check INTO ls_check WITH KEY line = ls_save-line
+                                               name = ls_save-name.
+    IF sy-subrc EQ 0.
+      ls_save-erdat = ls_check-erdat.
+      ls_save-ernam = ls_check-ernam.
+      ls_save-erzet = ls_check-erzet.
+      ls_save-aedat = sy-datum.
+      ls_save-aenam = sy-uname.
+      ls_save-aezet = sy-uzeit.
+    ELSE.
+      ls_save-erdat =  sy-datum.
+      ls_save-ernam =  sy-uname.
+      ls_save-erzet =  sy-uzeit.
+    ENDIF.
+
+    APPEND ls_save TO lt_save.
+  ENDLOOP.
+
+  MODIFY ztbig20_23 FROM TABLE lt_save.
+
+  IF sy-subrc EQ 0 .
+    COMMIT WORK.
+    MESSAGE s102.
+  ELSE.
+    ROLLBACK WORK.
+    MESSAGE s001 WITH 'Save error' DISPLAY LIKE 'E'.
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SET_FCAT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_0012   text
+*      -->P_0013   text
+*----------------------------------------------------------------------*
+FORM set_fcat  USING   pv_key pv_fieldnam.
+
+  gs_fcat-key = pv_key.
+  gs_fcat-fieldname = pv_fieldnam.
+
+  CASE pv_fieldnam.
+    WHEN 'ERDAT' OR 'ERNAM' OR 'ERZET' OR 'AEDAT' OR'AENAM' OR 'AEZET'.
+      gs_fcat-no_out = 'X'.
+  ENDCASE.
+
+  APPEND gs_fcat TO gt_fcat.
+  CLEAR  gs_fcat.
+
+ENDFORM.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

@@ -1,0 +1,22 @@
+*&---------------------------------------------------------------------*
+*& Report  ZRBIG20_04
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+INCLUDE zrbig20_04top                           .    " global Data
+INCLUDE zrbig20_04s01.
+INCLUDE zrbig20_04f01                           .  " FORM-Routines
+
+
+
+INITIALIZATION.
+  PERFORM set_init_value.
+
+START-OF-SELECTION.
+  PERFORM set_data.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

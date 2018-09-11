@@ -1,0 +1,42 @@
+*&---------------------------------------------------------------------*
+*& Report  ZRBIG20_25
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+INCLUDE zrbig20_25top                           .    " global Data
+INCLUDE zrbig20_25s01.
+INCLUDE zrbig20_25c01.
+INCLUDE zrbig20_25o01                           .  " PBO-Modules
+INCLUDE zrbig20_25i01                           .  " PAI-Modules
+INCLUDE zrbig20_25f01                           .  " FORM-Routines
+
+INITIALIZATION.
+  PERFORM set_init_value.
+
+START-OF-SELECTION.
+  PERFORM get_sde_data.
+  PERFORM set_icon_color.
+
+  IF gt_sde IS NOT INITIAL.
+    CALL SCREEN 100.
+  ELSE.
+    MESSAGE s037(k5) DISPLAY LIKE 'E'.
+  ENDIF.
+
+*GUI Texts
+*----------------------------------------------------------
+* TITLE100 --> SDESSERT master
+
+
+*Messages
+*----------------------------------------------------------
+*
+* Message class: K5
+*001   & & & &
+*037   데이타가 없습니다.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

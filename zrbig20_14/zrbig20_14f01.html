@@ -1,0 +1,174 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>ZRBIG20_14F01</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for: ZRBIG20_14F01</b></font>
+<hr>
+<pre width="100">
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&  Include           ZRBIG20_14F01</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&      Form  SET_INIT_VALUE</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*       text</font>
+<font color ="#0000FF">*----------------------------------------------------------------------*</font>
+<font color ="#0000FF">*  --&gt;  p1        text</font>
+<font color ="#0000FF">*  &lt;--  p2        text</font>
+<font color ="#0000FF">*----------------------------------------------------------------------*</font>
+FORM set_init_value .
+
+  s_carrid-sign   = 'I'.
+  s_carrid-option = 'EQ'.
+  s_carrid-low    = 'LH'.
+  APPEND s_carrid.
+
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&      Form  GET_AIRLINE_DATA</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*       text</font>
+<font color ="#0000FF">*----------------------------------------------------------------------*</font>
+<font color ="#0000FF">*  --&gt;  p1        text</font>
+<font color ="#0000FF">*  &lt;--  p2        text</font>
+<font color ="#0000FF">*----------------------------------------------------------------------*</font>
+FORM get_airline_data .
+
+  CLEAR : gt_scarr, gs_scarr.
+
+  SELECT *
+    INTO CORRESPONDING FIELDS OF TABLE gt_scarr
+    FROM scarr
+    WHERE carrid IN s_carrid.
+
+  IF gt_scarr IS INITIAL.
+    MESSAGE s037(k5) DISPLAY LIKE 'E'.
+    STOP.
+  ENDIF.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&      Form  INIT_SCREEN</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*       text</font>
+<font color ="#0000FF">*----------------------------------------------------------------------*</font>
+<font color ="#0000FF">*  --&gt;  p1        text</font>
+<font color ="#0000FF">*  &lt;--  p2        text</font>
+<font color ="#0000FF">*----------------------------------------------------------------------*</font>
+FORM init_screen .
+
+<font color ="#0000FF">*-- Set layout</font>
+  PERFORM set_layout.
+
+
+  "클래스가 생성되어 있는지 확인.
+  IF go_container IS INITIAL.
+
+    PERFORM create_object.
+
+    " 이제 ALV를 뿌려야 한다.
+    " Pattern 눌러서 메소드를 호출
+    CALL METHOD go_alv_grid-&gt;set_table_for_first_display
+      EXPORTING
+        i_structure_name = 'SCARR'
+        "칼럼 정보를 달라는 것.
+        "글로벌 스트럭쳐 또는 트랜스페런트 테이블
+        i_save           = 'A'
+        "ALV layout 설정 매번하기 귀찮잖아. layout을 저장.
+        i_default        = 'X'
+        is_layout        = gs_layout
+      CHANGING
+        it_outtab        = gt_scarr.
+    "어떤 데이터를 뿌릴 까요. 데이터를 가지고 있는 internal table을 연결해준다.
+    "Headerline이 있는 itab이면 []를 꼭 붙여준다.
+
+  ELSE.
+    CALL METHOD go_alv_grid-&gt;refresh_table_display.
+    "refresh를 해준다.
+    "Class의 메소드를 가져올 때 -&gt; 를 쓴다. : public
+    "                           =&gt;          : static 호출할 때
+  ENDIF.
+
+
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&      Form  SET_LAYOUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*       text</font>
+<font color ="#0000FF">*----------------------------------------------------------------------*</font>
+<font color ="#0000FF">*  --&gt;  p1        text</font>
+<font color ="#0000FF">*  &lt;--  p2        text</font>
+<font color ="#0000FF">*----------------------------------------------------------------------*</font>
+FORM set_layout .
+
+  " LVC_S_LAYO
+  " ZEBRA      : 라인에 색깔    /   SMALLTITLE : X 넣어 주면 title 작게 해줌.
+  " CWIDTH_OPT :                /   GRID_TITLE : ALV의 title을 직접 넣어줄 수 있음
+  " SEL_MODE   : 줄 선택을 가능하게 해줌.
+
+  gs_layout-zebra       = 'X'.  "Line color
+  gs_layout-cwidth_opt  = 'X'.  "Column width optimizer
+  gs_layout-sel_mode    = 'D'.  "Multi select mode
+
+  gs_layout-grid_title  = 'Airline'. "주로 텍스트 심볼을 쓴다.
+  gs_layout-smalltitle  = 'X'.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&      Form  CREATE_OBJECT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*       text</font>
+<font color ="#0000FF">*----------------------------------------------------------------------*</font>
+<font color ="#0000FF">*  --&gt;  p1        text</font>
+<font color ="#0000FF">*  &lt;--  p2        text</font>
+<font color ="#0000FF">*----------------------------------------------------------------------*</font>
+FORM create_object .
+
+<font color ="#0000FF">*-- Create container</font>
+  "이제 캔버스를 만들 차례
+  "쁘띠 프린터 옆에 Pattern 옆에서 Object 생성.
+  "주석 처리 되어 있는 것은 optional.
+  "주석이 안되어 있는 것은 obligatory.
+<font color ="#0000FF">*  CREATE OBJECT go_container</font>
+<font color ="#0000FF">*    EXPORTING</font>
+<font color ="#0000FF">*      container_name = 'GO_CONT'.</font>
+
+
+
+
+<font color ="#0000FF">*-- Create Docking container</font>
+
+  CREATE OBJECT go_container
+    EXPORTING
+      repid     = sy-repid
+            "Report ID       : ZRBIG20_14
+      dynnr     = sy-dynnr
+            "Screen No
+      side      = go_container-&gt;dock_at_left
+            "DOCK_AT_LEFT 는 class 내 전역 변수 (Attribute 라고 부름)
+      extension = 3000.
+
+
+
+
+
+
+<font color ="#0000FF">*-- Create ALV (Abap List Viewer)</font>
+  " 생성 순서를 반드시 지켜야 한다.!!! container 다음에 ALV 생성.
+  " 똑같이 Pattern에 가서 생성.
+  CREATE OBJECT go_alv_grid
+    EXPORTING
+      i_parent = go_container.
+  "너 어떤 container에 붙을 것이냐 묻는 것.
+
+ENDFORM.
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750
+</font>
+</body>
+</html>

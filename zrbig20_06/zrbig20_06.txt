@@ -1,0 +1,30 @@
+*&---------------------------------------------------------------------*
+*& Report  ZRBIG20_06
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+
+INCLUDE zrbig20_06top                           .    " global Data
+INCLUDE zrbig20_06s01.
+INCLUDE zrbig20_06f01                           .  " FORM-Routines
+
+INITIALIZATION.
+  PERFORM set_init_value.
+
+START-OF-SELECTION.
+  PERFORM get_sbook_data.
+  PERFORM display_sbook_data.
+
+
+*Messages
+*----------------------------------------------------------
+*
+* Message class: K5
+*001   & & & &
+*037   데이타가 없습니다.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

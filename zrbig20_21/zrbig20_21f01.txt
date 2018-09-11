@@ -1,0 +1,263 @@
+*&---------------------------------------------------------------------*
+*&  Include           ZRBIG20_21F01
+*&---------------------------------------------------------------------*
+*&---------------------------------------------------------------------*
+*&      Form  SET_INIT_VALUE
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM set_init_value .
+  p_carrid  = 'QF'.
+
+  s_id-sign     = 'I'.
+  s_id-option   = 'BT'.
+  s_id-low      = '1'.
+  s_id-high     = '500'.
+  APPEND s_id.
+  CLEAR s_id.
+
+  LOOP AT SCREEN.
+    IF screen-group1 EQ 'CON'.
+      screen-input  = 0.
+    ELSE.
+      screen-input  = 1.
+    ENDIF.
+    MODIFY SCREEN.
+  ENDLOOP.
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SCREEN_CONTROL
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM screen_control .
+  LOOP AT SCREEN.
+    CASE 'X'.
+      WHEN p_tick.
+        IF screen-group1  EQ 'CON'.
+          screen-input  = 0.
+        ELSEIF screen-group1 EQ 'ID'.
+          screen-input  = 1.
+        ENDIF.
+      WHEN p_cust.
+        IF screen-group1  EQ 'ID'.
+          screen-input  = 0.
+        ELSEIF screen-group1  EQ 'CON'.
+          screen-input  = 1.
+        ENDIF.
+    ENDCASE.
+    MODIFY SCREEN.
+  ENDLOOP.
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  GET_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM get_data .
+  CASE 'X'.
+    WHEN p_tick.
+      CLEAR : gs_stick, gt_stick.
+
+      SELECT *
+        INTO CORRESPONDING FIELDS OF TABLE gt_stick
+        FROM sticket
+        WHERE carrid    EQ p_carrid
+        AND   customid  IN s_id.
+
+      IF gt_stick IS INITIAL.
+        MESSAGE s037(k5) DISPLAY LIKE 'E'.
+        STOP.
+      ENDIF.
+
+    WHEN p_cust.
+      CLEAR : gs_scust, gt_scust.
+
+      SELECT *
+        INTO CORRESPONDING FIELDS OF TABLE gt_scust
+        FROM scustom
+        WHERE id  IN s_id.
+
+      IF gt_scust IS INITIAL.
+        MESSAGE s037(k5) DISPLAY LIKE 'E'.
+        STOP.
+      ENDIF.
+  ENDCASE.
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  EXIT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM exit .
+  CASE gv_okcode.
+    WHEN 'BACK'.
+      CALL METHOD : go_alv_grid->free,
+                    go_container->free.
+      FREE : go_alv_grid, go_container.
+      LEAVE TO SCREEN 0.
+  ENDCASE.
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  INIT_SCREEN
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM init_screen .
+  PERFORM set_layout.
+
+  CASE 'X'.
+    WHEN p_tick.
+      IF go_container IS INITIAL.
+        PERFORM create_obj.
+
+        CALL METHOD go_alv_grid->set_table_for_first_display
+          EXPORTING
+            i_structure_name = 'STICKET'
+            i_save           = 'A'
+            i_default        = 'X'
+            is_layout        = gs_layout
+          CHANGING
+            it_outtab        = gt_stick.
+      ELSE.
+        CALL METHOD : go_alv_grid->refresh_table_display.
+      ENDIF.
+
+    WHEN p_cust.
+      IF go_container IS INITIAL.
+        PERFORM create_obj.
+
+        CALL METHOD go_alv_grid->set_table_for_first_display
+          EXPORTING
+            i_structure_name = 'SCUSTOM'
+            i_save           = 'A'
+            i_default        = 'X'
+            is_layout        = gs_layout
+          CHANGING
+            it_outtab        = gt_scust.
+      ELSE.
+        CALL METHOD : go_alv_grid->refresh_table_display.
+      ENDIF.
+  ENDCASE.
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SET_LAYOUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM set_layout .
+  gs_layout-zebra = 'X'.
+  gs_layout-sel_mode  = 'D'.
+  gs_layout-cwidth_opt  = 'X'.
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  CREATE_OBJ
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM create_obj .
+
+  CREATE OBJECT go_container
+    EXPORTING
+      repid = sy-repid
+      dynnr = sy-dynnr
+      side  = go_container->dock_at_left
+     extension                   = 3000.
+
+  CREATE OBJECT go_alv_grid
+    EXPORTING
+      i_parent = go_container.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  CHECK_PARM
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM check_parm .
+  DATA : ls_stick TYPE sticket,
+         ls_scust TYPE scustom.
+
+  CASE 'X'.
+    WHEN p_tick.
+      IF s_id-low IS NOT INITIAL.
+        CLEAR ls_stick.
+
+        SELECT SINGLE *
+          INTO CORRESPONDING FIELDS OF ls_stick
+          FROM sticket
+          WHERE carrid    EQ p_carrid
+          AND   customid  IN s_id.
+
+        IF ls_stick IS INITIAL.
+          MESSAGE s001(k5) WITH TEXT-e01 DISPLAY LIKE 'E'.
+          STOP.
+        ENDIF.
+      ELSE.
+        CLEAR ls_stick.
+
+        SELECT SINGLE *
+          INTO CORRESPONDING FIELDS OF ls_stick
+          FROM sticket
+          WHERE carrid  EQ p_carrid.
+
+        IF ls_stick IS INITIAL.
+          MESSAGE s001(k5) WITH TEXT-e01 DISPLAY LIKE 'E'.
+          STOP.
+        ENDIF.
+      ENDIF.
+    WHEN p_cust.
+      IF s_id-low IS NOT INITIAL.
+        CLEAR ls_scust.
+
+        SELECT SINGLE *
+          INTO CORRESPONDING FIELDS OF ls_scust
+          FROM scustom
+          WHERE id  IN s_id.
+
+        IF ls_scust IS INITIAL.
+          MESSAGE s001(k5) WITH TEXT-e01 DISPLAY LIKE 'E'.
+          STOP.
+        ENDIF.
+      ELSE.
+        CLEAR ls_scust.
+
+        SELECT SINGLE *
+          INTO CORRESPONDING FIELDS OF ls_scust
+          FROM scustom
+          WHERE id  EQ s_id-low.
+
+        IF ls_scust IS INITIAL.
+          MESSAGE s001(k5) WITH TEXT-e01 DISPLAY LIKE 'E'.
+          STOP.
+        ENDIF.
+      ENDIF.
+  ENDCASE.
+ENDFORM.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

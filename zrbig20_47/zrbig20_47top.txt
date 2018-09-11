@@ -1,0 +1,28 @@
+*&---------------------------------------------------------------------*
+*& Include ZRBIG20_47TOP                                     Report ZRBIG20_47
+*&
+*&---------------------------------------------------------------------*
+REPORT zrbig20_47 MESSAGE-ID k5.
+
+**********************************************************************
+* Internal table and Work area
+**********************************************************************
+DATA : BEGIN OF gs_body,
+          prctr   TYPE faglflext-prctr,
+          ktext   TYPE cepct-ktext,
+          racct   TYPE faglflext-racct,
+          txt50   TYPE skat-txt50,
+          amount  TYPE faglflext-hsl01,
+       END OF gs_body,
+
+       gs_cepct   TYPE cepct,
+       gs_skat    TYPE skat,
+       gs_flext   TYPE faglflext.
+
+DATA : gt_body  LIKE TABLE OF gs_body,
+       gt_cepct LIKE TABLE OF gs_cepct,
+       gt_skat  LIKE TABLE OF gs_skat,
+       gt_flext LIKE TABLE OF gs_flext.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

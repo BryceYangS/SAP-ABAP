@@ -1,0 +1,53 @@
+*&---------------------------------------------------------------------*
+*& Report  ZRBIG20_17
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+INCLUDE zrbig20_17top                           .  " global Data
+INCLUDE zrbig20_17s01                           .  " Selection screen
+INCLUDE zrbig20_17o01                           .  " PBO-Modules
+INCLUDE zrbig20_17i01                           .  " PAI-Modules
+INCLUDE zrbig20_17f01                           .  " FORM-Routines
+
+**********************************************************************
+* INITIALIZATION
+**********************************************************************
+INITIALIZATION.
+ PERFORM set_init_value.
+
+**********************************************************************
+* AT SELECTION-SCREEN
+**********************************************************************
+AT SELECTION-SCREEN.
+  PERFORM check_param.
+
+**********************************************************************
+* START-OF-SELECTION
+**********************************************************************
+START-OF-SELECTION.
+  PERFORM get_airline_data.
+
+  IF gt_scarr IS NOT INITIAL.
+    CALL SCREEN 100.
+  ELSE.
+    MESSAGE s037  DISPLAY LIKE 'E'.
+    "차후 로직쓰는 경우 때문에 STOP은 걸지 않음.
+  ENDIF.
+
+*GUI Texts
+*----------------------------------------------------------
+* TITLE100 --> Airline master
+
+
+*Messages
+*----------------------------------------------------------
+*
+* Message class: K5
+*001   & & & &
+*037   데이타가 없습니다.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

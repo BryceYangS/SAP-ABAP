@@ -1,0 +1,59 @@
+*&---------------------------------------------------------------------*
+*& Include ZRBIG20_39TOP                                     Report ZRBIG20_39
+*&
+*&---------------------------------------------------------------------*
+REPORT zrbig20_39.
+
+**********************************************************************
+* Internal table and Work area
+**********************************************************************
+DATA : BEGIN OF gs_body,
+         drcrk  TYPE faglflext-drcrk,
+         hslvt  TYPE faglflext-hslvt,
+         racct  TYPE faglflext-racct,
+         txt50  TYPE skat-txt50,
+         hslvts TYPE faglflext-hslvt,
+         hslvth TYPE faglflext-hslvt,
+       END OF gs_body,
+
+       gs_skat TYPE skat,
+
+       BEGIN OF gs_collect,
+         drcrk TYPE faglflext-drcrk,
+         hslvt TYPE faglflext-hslvt,
+         racct TYPE faglflext-racct,
+         txt50 TYPE skat-txt50,
+       END OF gs_collect.
+
+DATA : BEGIN OF gs_copy,
+         racct  TYPE faglflext-racct,
+         txt50  TYPE skat-txt50,
+         hslvts TYPE faglflext-hslvt,
+         hslvth TYPE faglflext-hslvt,
+       END OF gs_copy.
+
+DATA : gt_body    LIKE TABLE OF gs_body,
+       gt_skat    LIKE TABLE OF gs_skat,
+       gt_collect LIKE TABLE OF gs_collect,
+       gt_copy    LIKE TABLE OF gs_copy.
+
+**********************************************************************
+* Class instance
+**********************************************************************
+DATA : go_container TYPE REF TO cl_gui_docking_container,
+       go_alv_grid  TYPE REF TO cl_gui_alv_grid,
+
+**********************************************************************
+* Layout & Field Catalog
+**********************************************************************
+       gs_layout    TYPE lvc_s_layo,
+       gs_fcat      TYPE lvc_s_fcat,
+       gt_fcat      TYPE lvc_t_fcat,
+
+**********************************************************************
+* Common variable
+**********************************************************************
+       gv_okcode    TYPE sy-ucomm.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

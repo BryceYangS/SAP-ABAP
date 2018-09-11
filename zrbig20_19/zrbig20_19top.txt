@@ -1,0 +1,49 @@
+*&---------------------------------------------------------------------*
+*& Include ZRBIG20_19TOP                                     Report ZRBIG20_19
+*&
+*&---------------------------------------------------------------------*
+REPORT zrbig20_19.
+
+TABLES : spfli, sflight, sscrfields.
+
+DATA : "gt_sflight TYPE TABLE OF sflight,
+*       gs_sflight TYPE sflight,
+*       gt_sbook   TYPE TABLE OF sbook,
+*       gs_sbook   TYPE sbook,
+
+
+  go_alv_grid  TYPE REF TO cl_gui_alv_grid,
+  go_container TYPE REF TO cl_gui_docking_container,
+
+  gs_layout    TYPE lvc_s_layo,
+
+  gv_okcode    TYPE sy-ucomm.
+
+
+*-- Include structure
+DATA : BEGIN OF gs_sflight.
+    INCLUDE TYPE sflight.
+" INCLUDE STRUCTURE sflight 도 가능
+DATA : col(4),  "For color code
+        "col TYPE c LENGTH 4.
+       END OF gs_sflight.
+DATA : gt_sflight LIKE TABLE OF gs_sflight.
+
+"==> Query 문으로 gt_slflight에 한번에 다 들어감.
+"   그 row data들에 대한 수정이 필요하기 때문에 MODIFY TABLE .. FROM .. 을 사용할 것.
+
+
+*-- Include Structure
+DATA : BEGIN OF gs_sbook.
+    INCLUDE STRUCTURE sbook.
+DATA : pic    TYPE icon-id,
+       col(4),
+       END OF gs_sbook.
+DATA : gt_sbook LIKE TABLE OF gs_sbook.
+
+*-- For ALV Field Catalog
+DATA : gt_fcat TYPE lvc_t_fcat,
+       gs_fcat TYPE lvc_s_fcat.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

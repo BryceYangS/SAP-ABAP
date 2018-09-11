@@ -1,0 +1,53 @@
+*&---------------------------------------------------------------------*
+*& Include ZRBIG20_27TOP                                     Report ZRBIG20_27
+*&
+*&---------------------------------------------------------------------*
+REPORT zrbig20_27 MESSAGE-ID k5.
+
+**********************************************************************
+* TABLES
+**********************************************************************
+TABLES : bseg, t001.
+
+**********************************************************************
+* Internal table and Work area
+**********************************************************************
+DATA : BEGIN OF gs_bseg,
+         bukrs TYPE bseg-bukrs,
+         butxt TYPE t001-butxt,
+         gjahr TYPE bseg-gjahr,
+         bewar TYPE bseg-bewar,
+         betxt TYPE t856t-txt,
+       END OF gs_bseg,
+
+       gs_t001  TYPE t001,
+       gs_t856t TYPE t856t.
+
+DATA : gt_bseg  LIKE TABLE OF gs_bseg,
+       gt_t001  LIKE TABLE OF gs_t001,
+       gt_t856t LIKE TABLE OF gs_t856t.
+
+**********************************************************************
+* Class instance
+**********************************************************************
+DATA : go_container TYPE REF TO cl_gui_docking_container,
+       go_alv_grid  TYPE REF TO cl_gui_alv_grid.
+
+**********************************************************************
+* Layout
+**********************************************************************
+DATA : gs_layout  TYPE lvc_s_layo.
+
+**********************************************************************
+* Field Catalog
+**********************************************************************
+DATA : gs_fcat  TYPE lvc_s_fcat,
+       gt_fcat  LIKE TABLE OF gs_fcat.
+
+**********************************************************************
+* Common variable
+**********************************************************************
+DATA : gv_okcode TYPE sy-ucomm.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

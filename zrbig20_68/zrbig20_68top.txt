@@ -1,0 +1,94 @@
+*&---------------------------------------------------------------------*
+*& Include ZRBIG20_68TOP                                     Report ZRBIG20_68
+*&
+*&---------------------------------------------------------------------*
+REPORT zrbig20_68.
+
+**********************************************************************
+* TABLES
+**********************************************************************
+TABLES : bkpf.
+
+**********************************************************************
+* Internal table and Work area
+**********************************************************************
+DATA : BEGIN OF gs_body,
+         belnr TYPE bkpf-belnr,
+         blart TYPE bkpf-blart,
+         hkont TYPE bset-hkont,
+         mwskz TYPE bset-mwskz,
+         hwbas TYPE bset-hwbas,
+         waers TYPE bkpf-waers,
+       END OF gs_body,
+
+       BEGIN OF gs_alv_body,
+         belnr TYPE bkpf-belnr,
+         blart TYPE bkpf-blart,
+         hkont TYPE bset-hkont,
+         txt50 TYPE skat-txt50,
+         mwskz TYPE bset-mwskz,
+         text1 TYPE t007s-text1,
+         hwbas TYPE bset-hwbas,
+         waers TYPE bkpf-waers,
+       END OF gs_alv_body,
+
+       gs_bkpf      TYPE bkpf,
+       gs_bset      TYPE bset,
+       gs_skat      TYPE skat,
+       gs_t007s     TYPE t007s,
+       gs_bseg      TYPE bseg,
+
+       gt_body      LIKE TABLE OF gs_body,
+       gt_alv_body  LIKE TABLE OF gs_alv_body,
+       gt_bkpf      LIKE TABLE OF gs_bkpf,
+       gt_bset      LIKE TABLE OF gs_bset,
+       gt_skat      LIKE TABLE OF gs_skat,
+       gt_t007s     LIKE TABLE OF gs_t007s,
+       gt_bseg      LIKE TABLE OF gs_bseg,
+
+**********************************************************************
+* Class instance
+**********************************************************************
+       go_container TYPE REF TO cl_gui_docking_container,
+       go_alv_grid  TYPE REF TO cl_gui_alv_grid,
+       go_pop_con   TYPE REF TO cl_gui_custom_container,
+       go_pop_grid  TYPE REF TO cl_gui_alv_grid,
+
+**********************************************************************
+* Layout & Sort & Field Catalog
+**********************************************************************
+       gs_layo      TYPE lvc_s_layo,
+       gs_sort      TYPE lvc_s_sort,
+       gt_sort      TYPE lvc_t_sort,
+       gs_fcat      TYPE lvc_s_fcat,
+       gt_fcat      TYPE lvc_t_fcat,
+       gs_pop_layo  TYPE lvc_s_layo,
+       gs_pop_sort  TYPE lvc_s_sort,
+       gt_pop_sort  TYPE lvc_t_sort,
+       gs_pop_fcat  TYPE lvc_s_fcat,
+       gt_pop_fcat  TYPE lvc_t_fcat,
+
+**********************************************************************
+* Common variable
+**********************************************************************
+       gv_okcode    TYPE sy-ucomm,
+
+**********************************************************************
+* ADBC
+**********************************************************************
+
+*-- Main class
+       go_conn      TYPE REF TO cl_sql_connection,
+       go_stmt      TYPE REF TO cl_sql_statement,
+       go_rs        TYPE REF TO cl_sql_result_set,
+
+*-- For SQL
+       gv_sql       TYPE string,
+       gr_data      TYPE REF TO data,
+
+*-- For try~catch statement
+       gv_text      TYPE string, " For error message
+       go_root      TYPE REF TO cx_root.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

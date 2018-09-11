@@ -1,0 +1,42 @@
+*&---------------------------------------------------------------------*
+*& Report  ZRBIG20_57
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+INCLUDE zrbig20_57top                           .    " global Data
+
+INCLUDE zrbig20_57s01                           .  "
+* INCLUDE ZRBIG20_57I01                           .  " PAI-Modules
+INCLUDE zrbig20_57f01                           .  " FORM-Routines
+
+START-OF-SELECTION.
+  PERFORM get_airline_data.
+
+
+*-- Select query
+  SELECT carrid, carrname, url
+    INTO TABLE @DATA(lt_scarr)
+    FROM scarr.
+
+*-- Join query
+  SELECT a~carrid, carrname, connid
+    INTO TABLE @DATA(lt_spfli)
+    FROM scarr AS a INNER JOIN spfli AS b
+    ON   a~carrid EQ b~carrid
+    WHERE a~carrid EQ @p_carrid.
+
+*-- Concatename
+  SELECT 'A' & 'url' AS cont
+    INTO TABLE @DATA(lt_char)
+    FROM scarr.
+
+*-- LOOP 에서 바로 Work area 생성됨
+  LOOP AT lt_char INTO DATA(ls_char).
+    WRITE : ls_char-cont.
+  ENDLOOP.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

@@ -1,0 +1,51 @@
+*&---------------------------------------------------------------------*
+*& Report  ZRBIG20_62
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+INCLUDE zrbig20_62top                           .    " global Data
+INCLUDE zrbig20_62s01.
+INCLUDE zrbig20_62c01.
+INCLUDE zrbig20_62o01                           .  " PBO-Modules
+INCLUDE zrbig20_62i01                           .  " PAI-Modules
+INCLUDE zrbig20_62f01                           .  " FORM-Routines
+
+
+**********************************************************************
+* INITIALIZATION
+**********************************************************************
+INITIALIZATION.
+  PERFORM set_init_value.
+
+**********************************************************************
+* START-OF-SELECTION
+**********************************************************************
+START-OF-SELECTION.
+  PERFORM get_data.
+  PERFORM make_display_data.
+
+  IF gt_body IS INITIAL.
+    MESSAGE s037 DISPLAY LIKE 'E'.
+  ELSE.
+    CALL SCREEN 100.
+  ENDIF.
+
+*GUI Texts
+*----------------------------------------------------------
+* TITLE100 --> [BD] Payment list
+* TITLE110 --> [BD] Payment detail
+
+
+*Messages
+*----------------------------------------------------------
+*
+* Message class: K5
+*001   & & & &
+*037   데이타가 없습니다.
+*102   데이터를 저장했습니다.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

@@ -1,0 +1,22 @@
+FUNCTION ZFM_DOC_DETAIL_20_06.
+*"----------------------------------------------------------------------
+*"*"Local Interface:
+*"  IMPORTING
+*"     REFERENCE(I_BUKRS) TYPE  BUKRS
+*"     REFERENCE(I_BELNR) TYPE  BELNR_D
+*"     REFERENCE(I_GJAHR) TYPE  GJAHR
+*"  EXPORTING
+*"     REFERENCE(E_SUBRC) TYPE  SY-SUBRC
+*"  TABLES
+*"      T_BSEG STRUCTURE  BSEG
+*"----------------------------------------------------------------------
+
+
+PERFORM get_bseg_data1 TABLES t_bseg
+                       USING i_bukrs i_belnr i_gjahr e_subrc.
+
+
+ENDFUNCTION.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

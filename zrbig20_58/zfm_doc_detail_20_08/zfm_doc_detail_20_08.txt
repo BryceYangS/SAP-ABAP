@@ -1,0 +1,19 @@
+FUNCTION ZFM_DOC_DETAIL_20_08.
+*"----------------------------------------------------------------------
+*"*"Local Interface:
+*"  IMPORTING
+*"     REFERENCE(I_VBELN) TYPE  VBAK-VBELN
+*"  EXPORTING
+*"     REFERENCE(E_SUBRC) TYPE  SY-SUBRC
+*"  TABLES
+*"      T_VBAP STRUCTURE  VBAP
+*"----------------------------------------------------------------------
+
+
+PERFORM get_sales_detail TABLES t_vbap USING i_vbeln e_subrc.
+
+
+ENDFUNCTION.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

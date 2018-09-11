@@ -1,0 +1,364 @@
+*&---------------------------------------------------------------------*
+*&  Include           ZRBIG20_10F01
+*&---------------------------------------------------------------------*
+*&---------------------------------------------------------------------*
+*&      Form  SET_INIT_VALUE
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM set_init_value .
+
+  p_carrid = 'LH'.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  GET_AIR_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM get_air_data .
+
+  SELECT a~carrid connid carrname cityfrom cityto url
+  INTO CORRESPONDING FIELDS OF TABLE gt_airline
+  FROM  scarr AS a INNER JOIN spfli AS b
+  ON    a~carrid EQ b~carrid
+  WHERE a~carrid EQ p_carrid
+  AND   connid   IN s_connid.
+
+  IF gt_airline IS INITIAL.
+    MESSAGE s037 DISPLAY LIKE 'E'.
+  ELSE.
+    MESSAGE s001 WITH TEXT-s01 sy-dbcnt TEXT-s02.
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  DISPLAY_AIR_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM display_air_data .
+
+  LOOP AT gt_airline INTO gs_airline.
+
+    WRITE :/
+      gs_airline-carrid,  gs_airline-connid,  gs_airline-carrname,
+      gs_airline-cityfrom,gs_airline-cityto,  gs_airline-url.
+
+  ENDLOOP.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  GET_BOOK_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM get_book_data .
+
+  SELECT a~carrid a~connid  price planetype customid  wunit
+  INTO CORRESPONDING FIELDS OF TABLE gt_booking
+  FROM  sflight AS a INNER JOIN sbook AS b
+  ON    a~carrid EQ b~carrid
+  AND   a~connid EQ b~connid
+  AND   a~fldate EQ b~fldate
+  WHERE a~carrid EQ p_carrid
+  AND   a~connid IN s_connid.
+
+  IF gt_booking IS INITIAL.
+    MESSAGE s037 DISPLAY LIKE 'E'.
+  ELSE.
+    MESSAGE s001 WITH TEXT-s01 sy-dbcnt TEXT-s02.
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  DISPLAY_BOOK_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM display_book_data .
+
+  LOOP AT gt_booking INTO gs_booking.
+
+    WRITE :/
+      gs_booking-carrid,    gs_booking-connid,  gs_booking-price,
+      gs_booking-planetype, gs_booking-customid,gs_booking-wunit.
+
+  ENDLOOP.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  GET_FAIR_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM get_fair_data .
+**********************************************************************
+* 기준 데이터 조회
+**********************************************************************
+  CLEAR : gt_scarr, gt_scarr[].
+
+  SELECT *
+    FROM scarr
+    INTO CORRESPONDING FIELDS OF TABLE gt_scarr
+    WHERE carrid IN s_carrid.
+
+*-- Initial check : Step 1
+  IF gt_scarr[] IS INITIAL.
+    "반드시 [] !!!!!!!!
+
+    MESSAGE s037 DISPLAY LIKE 'E'.
+    STOP.
+  ENDIF.
+
+*-- Sort by connection column : Step 2
+  SORT gt_scarr BY carrid ASCENDING.
+
+*-- Delete duplicate data
+  DELETE ADJACENT DUPLICATES FROM gt_scarr COMPARING carrid.
+
+*-- Data select by For all entries
+  CLEAR : gt_spfli[], gt_spfli.
+  SELECT *
+    INTO CORRESPONDING FIELDS OF TABLE gt_spfli
+    FROM spfli
+    FOR ALL ENTRIES IN gt_scarr
+    WHERE carrid EQ gt_scarr-carrid " Connection column
+    AND   connid IN s_connid.       " Search condition
+
+  " scarr를 기준으로 spfli의 data를 걸러낸다
+  " scarr가 부모, Master table.
+  " scarr : AA     / LH
+  " spfli : AA 2건 / LH 5건
+  " => 따라서 scarr가 바깥 루프를 돌아야 한다.
+
+*-- Compose display data
+
+  " scarr / spfli 얘네들을 따로 다루었기 때문에 하나로 모으는 작업이 필요함.
+  CLEAR : gt_airline, gs_airline.
+
+  LOOP AT gt_scarr.
+
+    LOOP AT gt_spfli WHERE carrid EQ gt_scarr-carrid.     "Headerline이 있는 것이기 때문에 gt_로!!
+      " 없는 경우 gs_scarr- ... 로 와야 한다.
+      gs_airline-carrid    = gt_scarr-carrid.
+      " 값에 대한 왜곡이 발생하지 않는 다면 바깥 놈을 쓸 수 있다.
+      gs_airline-connid    = gt_spfli-connid.
+      gs_airline-carrname  = gt_scarr-carrname.
+      gs_airline-cityfrom  = gt_spfli-cityfrom.
+      gs_airline-cityto    = gt_spfli-cityto.
+      gs_airline-url       = gt_scarr-url.
+      APPEND gs_airline TO gt_airline.
+      CLEAR gs_airline.
+
+    ENDLOOP.
+
+  ENDLOOP.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  GET_FLIGHT_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM get_flight_data .
+
+  CLEAR : gt_sflight.
+
+  SELECT *
+    INTO CORRESPONDING FIELDS OF TABLE gt_sflight
+    FROM sflight
+    WHERE carrid IN s_carrid
+    AND   connid IN s_connid.
+
+  IF gt_sflight IS INITIAL.
+    MESSAGE s037 DISPLAY LIKE 'E'.
+    STOP.
+  ENDIF.
+
+  SORT gt_sflight BY carrid connid fldate.
+
+  DELETE ADJACENT DUPLICATES FROM gt_sflight COMPARING carrid connid fldate.
+  "DISTINCT 처럼 조합이 중복되는 애들을 제거
+  CLEAR : gt_sbook.
+
+  SELECT *
+    INTO CORRESPONDING FIELDS OF TABLE gt_sbook
+    FROM sbook
+    FOR ALL ENTRIES IN gt_sflight
+    WHERE carrid EQ gt_sflight-carrid
+    AND   connid EQ gt_sflight-connid
+    AND   fldate EQ gt_sflight-fldate.
+
+  CLEAR : gs_booking, gt_booking.
+
+  LOOP AT gt_sflight INTO gs_sflight.
+
+    LOOP AT gt_sbook INTO gs_sbook WHERE carrid EQ gs_sflight-carrid
+                                   AND   connid EQ gs_sflight-connid
+                                   AND   fldate EQ gs_sflight-fldate.
+
+      gs_booking-carrid    = gs_sflight-carrid.
+      gs_booking-connid    = gs_sflight-connid.
+      gs_booking-price     = gs_sflight-price.
+      gs_booking-planetype = gs_sflight-planetype.
+      gs_booking-customid  = gs_sbook-customid.
+      gs_booking-wunit     = gs_sbook-wunit.
+      APPEND gs_booking TO gt_booking.
+      CLEAR gs_booking.
+
+    ENDLOOP.
+
+  ENDLOOP.
+
+  IF sy-subrc EQ '0'.
+    WRITE :/
+     sy-dbcnt.
+  ENDIF.
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  GET_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM get_data .
+
+  CLEAR : gt_spfli[], gt_spfli.
+
+  SELECT * INTO CORRESPONDING FIELDS OF TABLE gt_spfli
+    FROM spfli
+    WHERE carrid IN s_carrid
+    AND   connid IN s_connid.
+
+  IF gt_spfli[] IS INITIAL.
+    MESSAGE s037 DISPLAY LIKE 'E'.
+    STOP.
+  ENDIF.
+
+  SORT gt_spfli BY carrid ASCENDING.
+
+  DELETE ADJACENT DUPLICATES FROM gt_spfli COMPARING carrid.
+
+  CLEAR : gt_scarr[], gt_scarr.
+
+  SELECT * INTO CORRESPONDING FIELDS OF TABLE gt_scarr
+    FROM scarr
+    FOR ALL ENTRIES IN gt_spfli
+    WHERE carrid EQ gt_spfli-carrid.
+
+
+  CLEAR : gt_airline, gs_airline.
+  LOOP AT gt_spfli.
+
+    LOOP AT gt_scarr WHERE carrid EQ gt_spfli-carrid.
+
+      gs_airline-carrid    = gt_scarr-carrid.
+      gs_airline-connid    = gt_spfli-connid.
+      gs_airline-carrname  = gt_scarr-carrname.
+      gs_airline-cityfrom  = gt_spfli-cityfrom.
+      gs_airline-cityto    = gt_spfli-cityto.
+      gs_airline-url       = gt_scarr-url.
+      APPEND gs_airline TO gt_airline.
+      CLEAR gs_airline.
+
+    ENDLOOP.
+
+  ENDLOOP.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  VALUE_SUM
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_1      text
+*      -->P_2      text
+*      <--P_GV_SUM  text
+*----------------------------------------------------------------------*
+FORM value_sum  USING pv_a      " Call by value
+                      pv_b      " Call by value
+                CHANGING pv_sum.    " Call by reference
+
+  pv_sum  = pv_a + pv_b.
+
+  WRITE pv_sum.
+
+  IF pv_sum GT 2.
+    EXIT.
+  ENDIF.
+
+  PERFORM value_sum USING pv_a 3 CHANGING pv_sum.
+  "재귀 호출 : 무한 루프에 빠지는 것을 유의 해야 한다.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  DISPLAY_SCARR
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_GS_AIRLINE_CARRID  text
+*      -->P_GS_AIRLINE_CONNID  text
+*----------------------------------------------------------------------*
+FORM display_scarr  USING  pv_carrid
+                           pv_connid.
+
+  WRITE :/ pv_carrid, pv_connid.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  DISPLAY_AIRLINE
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_GT_AIRLINE  text
+*      -->P_1      text
+*      -->P_2      text
+*      <--P_GV_SUM  text
+*----------------------------------------------------------------------*
+FORM display_airline  TABLES   pt_airline STRUCTURE gs_airline
+                                 "Insert a correct name for <...>
+                                 "얘의 구조를 알려주기 위해 STRUCTURE 뒤에 써줍니다.
+                                 "반드시 work area만 올 수 있는 것은 아니다; internal table/transparent 등 가능.
+                      USING    pv_a pv_b
+                      CHANGING pv_sum.
+  " 형식 매개 변수는 지역 변수.
+
+*-- Internal table with headerline
+  LOOP AT pt_airline.
+    "Headerline이 있음.
+    WRITE :/
+      pt_airline-carrid, pt_airline-connid, pt_airline-url.
+  ENDLOOP.
+
+  PERFORM value_sum USING pv_a pv_b CHANGING pv_sum.
+  "Subroutine 안에 또 다른 Subroutine 호출 가능.
+
+
+ENDFORM.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

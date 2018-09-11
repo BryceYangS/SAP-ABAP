@@ -1,0 +1,26 @@
+FUNCTION ZFM_SPFLI_20.
+*"----------------------------------------------------------------------
+*"*"Local Interface:
+*"  IMPORTING
+*"     REFERENCE(I_CARRID) TYPE  SPFLI-CARRID
+*"     REFERENCE(I_CONNID) TYPE  SPFLI-CONNID
+*"  EXPORTING
+*"     REFERENCE(E_SUBRC) TYPE  SY-SUBRC
+*"  TABLES
+*"      T_SPFLI STRUCTURE  SPFLI
+*"----------------------------------------------------------------------
+
+*-- Schedule data
+  PERFORM get_spfli_data USING i_carrid i_connid
+                         CHANGING e_subrc.
+
+  t_spfli[] = gt_spfli.
+  "Function group의 global itab에만 data를 넣어줬음.
+  "Function module이 data를 가져야 나중에 다른 프로그램에도 던져줄 수 있다.
+  "나중에 CALL FUNCTION을 하면 TABLES에 값을 넣어줄 변수를 선언할 것인데 t_spfli에 넣어 주지 않으면
+     " Calling program의 변수에 data를 넣어주지 않은 것.
+
+ENDFUNCTION.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

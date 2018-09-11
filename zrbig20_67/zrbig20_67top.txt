@@ -1,0 +1,32 @@
+*&---------------------------------------------------------------------*
+*& Include ZRBIG20_67TOP                                     Report ZRBIG20_67
+*&
+*&---------------------------------------------------------------------*
+REPORT zrbig20_67.
+
+**********************************************************************
+* TABLES
+**********************************************************************
+TABLES : bkpf.
+
+**********************************************************************
+* Internal table and Work area
+**********************************************************************
+DATA : gt_bkpf TYPE TABLE OF bkpf,
+       gs_bkpf TYPE bkpf.
+
+**********************************************************************
+* For ADBC
+**********************************************************************
+DATA : go_conn TYPE REF TO cl_sql_connection,
+       go_stmt TYPE REF TO cl_sql_statement,
+       go_rs   TYPE REF TO cl_sql_result_set,
+
+       gv_sql  TYPE string,
+       gv_text TYPE string,
+
+       go_root TYPE REF TO cx_root,
+       gr_data TYPE REF TO data.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

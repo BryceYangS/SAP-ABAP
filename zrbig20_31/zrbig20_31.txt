@@ -1,0 +1,50 @@
+*&---------------------------------------------------------------------*
+*& Report  ZRBIG20_31
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+INCLUDE zrbig20_31top                           .    " global Data
+INCLUDE zrbig20_31s01.
+INCLUDE zrbig20_31o01                           .  " PBO-Modules
+INCLUDE zrbig20_31i01                           .  " PAI-Modules
+INCLUDE zrbig20_31f01                           .  " FORM-Routines
+
+AT SELECTION-SCREEN ON VALUE-REQUEST FOR p_file.
+  CALL FUNCTION 'F4_FILENAME'
+    EXPORTING
+      field_name = 'P_FILE'
+    IMPORTING
+      file_name  = p_file.
+
+START-OF-SELECTION.
+
+  CALL FUNCTION 'TEXT_CONVERT_XLS_TO_SAP'
+    EXPORTING
+*     I_FIELD_SEPERATOR    =
+      i_line_header        = 'X'
+      i_tab_raw_data       = it_raw       " WORK TABLE
+      i_filename           = p_file
+    TABLES
+      i_tab_converted_data = it_datatab[]    "ACTUAL DATA
+    EXCEPTIONS
+      conversion_failed    = 1
+      OTHERS               = 2.
+
+  IF sy-subrc <> 0.
+    MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+            WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+  ENDIF.
+
+  IF it_datatab[] IS NOT INITIAL.
+    CALL SCREEN 100.
+  ENDIF.
+
+*GUI Texts
+*----------------------------------------------------------
+* TITLE100 --> Cross road info
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

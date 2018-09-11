@@ -1,0 +1,40 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>ZRBIG20_13S01</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for: ZRBIG20_13S01</b></font>
+<hr>
+<pre width="100">
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&  Include           ZRBIG20_13S01</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+
+
+SELECTION-SCREEN BEGIN OF BLOCK pa1 WITH FRAME TITLE text-t01.
+
+  PARAMETERS : p_carrid TYPE spfli-carrid OBLIGATORY MODIF ID car.
+
+  SELECTION-SCREEN SKIP.
+
+  SELECT-OPTIONS : s_connid FOR spfli-connid MODIF ID con,
+                   s_fldate FOR sbook-fldate.
+
+SELECTION-SCREEN END OF BLOCK pa1.
+
+SELECTION-SCREEN BEGIN OF BLOCK pa2 WITH FRAME TITLE text-t02.
+
+  PARAMETERS : p_carr   AS CHECKBOX USER-COMMAND rb,
+               p_conn   AS CHECKBOX USER-COMMAND rb1.
+
+SELECTION-SCREEN END OF BLOCK pa2.
+
+SELECTION-SCREEN
+  PUSHBUTTON /pos_low(15) gv_text USER-COMMAND chk.
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750
+</font>
+</body>
+</html>

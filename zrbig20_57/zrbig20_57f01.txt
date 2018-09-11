@@ -1,0 +1,57 @@
+*&---------------------------------------------------------------------*
+*&  Include           ZRBIG20_57F01
+*&---------------------------------------------------------------------*
+*&---------------------------------------------------------------------*
+*&      Form  GET_AIRLINE_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM get_airline_data .
+
+**********************************************************************
+* Open SQL new syntax
+**********************************************************************
+*-- Select 한 Cloumn 과 동일한 layout 의 인터널 테이블이 생성됨.
+  SELECT carrid, carrname, url
+    INTO TABLE @DATA(lt_scarr)
+    FROM scarr
+    WHERE carrid EQ @p_carrid.
+  "Open SQL에서 new sytax를 사용할 때 column에서  , 를 빼먹지 않도록 한다!!!
+  "조회조건에 들어가는 것은 반드시 @를 붙여준다.
+
+
+  " Work area를 생성해줌.
+  LOOP AT lt_scarr INTO DATA(ls_scarr).
+    ls_scarr-url  = 'url'.
+    MODIFY lt_scarr FROM ls_scarr INDEX sy-tabix TRANSPORTING url.
+  ENDLOOP.
+
+*-- Join query
+  SELECT a~carrid, carrname, connid, cityfrom
+    INTO TABLE @DATA(lt_fly)
+    FROM scarr AS a INNER JOIN spfli AS b
+    ON   a~carrid EQ b~carrid
+    WHERE a~carrid EQ @p_carrid.
+
+*-- Concatenate
+  SELECT 'A' & '_Team' AS name " <- A_Team
+    INTO TABLE @DATA(lt_char)
+    FROM scarr.
+
+*-- Concatenate : Value and Column
+  "테이블에 있는 url 칼럼과 합치는 것은 255글자가 넘지 않으면 됨.
+  SELECT 'A' && url AS url
+    INTO TABLE @DATA(lt_a)
+    FROM zscarr_20.
+
+  LOOP AT lt_char INTO DATA(ls_char).
+    WRITE:/ ls_char-name.
+  ENDLOOP.
+
+ENDFORM.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

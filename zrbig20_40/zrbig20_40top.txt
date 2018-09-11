@@ -1,0 +1,45 @@
+*&---------------------------------------------------------------------*
+*& Include ZRBIG20_40TOP                                     Report ZRBIG20_40
+*&
+*&---------------------------------------------------------------------*
+REPORT zrbig20_40 MESSAGE-ID k5.
+
+**********************************************************************
+* Internal table and Work area
+**********************************************************************
+DATA: BEGIN OF gs_body,
+        debit  TYPE faglflext-hslvt,   " 차변 금액
+        racct  TYPE faglflext-racct,   " G/L 계정
+        txt50  TYPE skat-txt50,        " G/L 계정명
+        credit TYPE faglflext-hslvt,   " 대변 금액
+      END OF gs_body,
+
+      gs_flext TYPE faglflext,
+      gs_skat  TYPE skat.
+
+DATA : gt_body  LIKE TABLE OF gs_body,
+       gt_flext TYPE TABLE OF faglflext,
+       gt_skat  TYPE TABLE OF skat.
+
+**********************************************************************
+* Class instance
+**********************************************************************
+DATA : go_container TYPE REF TO cl_gui_docking_container,
+       go_alv_grid  TYPE REF TO cl_gui_alv_grid,
+
+**********************************************************************
+* Layout & Sort & Field catalog
+**********************************************************************
+       gs_layo      TYPE lvc_s_layo,
+       gs_sort      TYPE lvc_s_sort,
+       gt_sort      LIKE TABLE OF gs_sort,
+       gs_fcat      TYPE lvc_s_fcat,
+       gt_fcat      LIKE TABLE OF gs_fcat,
+
+**********************************************************************
+* Common variable
+**********************************************************************
+       gv_okcode    TYPE sy-ucomm.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

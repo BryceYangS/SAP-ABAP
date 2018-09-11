@@ -1,0 +1,135 @@
+*&---------------------------------------------------------------------*
+*&  Include           ZRBIG20_47F01
+*&---------------------------------------------------------------------*
+*&---------------------------------------------------------------------*
+*&      Form  GET_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM get_data .
+
+  CLEAR : gt_flext.
+  SELECT *
+    INTO CORRESPONDING FIELDS OF TABLE gt_flext
+    FROM faglflext
+    WHERE rbukrs EQ p_rbukrs
+    AND   ryear  EQ p_ryear
+    AND   rldnr  EQ p_rldnr
+    AND   rvers  EQ p_rvers.
+
+  IF gt_flext IS INITIAL.
+    MESSAGE s037 DISPLAY LIKE 'E'.
+    STOP.
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  GET_TEXT_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM get_text_data .
+
+  DATA : lt_flext LIKE gt_flext.
+
+*-- Get ktext data from CEPCT text table.
+  lt_flext = gt_flext.
+  SORT lt_flext BY prctr ASCENDING.
+  DELETE ADJACENT DUPLICATES FROM lt_flext COMPARING prctr.
+
+  CLEAR : gt_cepct.
+  SELECT *
+    INTO CORRESPONDING FIELDS OF TABLE gt_cepct
+    FROM cepct
+    FOR ALL ENTRIES IN lt_flext
+    WHERE prctr EQ lt_flext-prctr
+    AND   spras EQ sy-langu.
+
+*-- Get txt50 data from SKAT text table.
+  CLEAR : lt_flext.
+  lt_flext = gt_flext.
+  SORT lt_flext BY racct ASCENDING.
+  DELETE ADJACENT DUPLICATES FROM lt_flext COMPARING racct.
+
+  CLEAR : gt_skat.
+  SELECT *
+    INTO CORRESPONDING FIELDS OF TABLE gt_skat
+    FROM skat
+    FOR ALL ENTRIES IN lt_flext
+    WHERE saknr EQ lt_flext-racct
+    AND   ktopl EQ 'CAIN'
+    AND   spras EQ sy-langu.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  MAKE_DISPLAY_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM make_display_data .
+
+  DATA : lv_tabix   TYPE sy-tabix,
+         lv_mon(2)  TYPE n,
+         lv_var(20).
+
+  FIELD-SYMBOLS <lv_fs> TYPE any.
+
+  SORT : gt_skat  BY saknr ASCENDING,
+         gt_cepct BY prctr ASCENDING.
+
+
+  CLEAR : gs_flext, gt_body.
+  LOOP AT gt_flext INTO gs_flext.
+
+*-- Copy data From flext To body
+    CLEAR : gs_body.
+    MOVE-CORRESPONDING gs_flext TO gs_body.
+
+*-- KTEXT
+    CLEAR : gs_cepct.
+    READ TABLE gt_cepct INTO gs_cepct WITH KEY prctr = gs_body-prctr
+                                      BINARY SEARCH.
+    IF sy-subrc EQ 0.
+      gs_body-ktext = gs_cepct-ktext.
+    ENDIF.
+
+*-- TXT50
+    CLEAR : gs_skat.
+    READ TABLE gt_skat INTO gs_skat WITH KEY saknr = gs_body-racct
+                                    BINARY SEARCH.
+    IF sy-subrc EQ 0.
+      gs_body-txt50 = gs_skat-txt50.
+    ENDIF.
+
+    CLEAR : lv_mon.
+    DO p_monat TIMES.
+
+      lv_mon = lv_mon + 1.
+
+      CLEAR : lv_var.
+      CONCATENATE 'gs_flext-hsl' lv_mon INTO lv_var.
+      ASSIGN (lv_var) TO <lv_fs>.
+
+      gs_body-amount = gs_body-amount + <lv_fs>.
+
+    ENDDO.
+
+    COLLECT gs_body INTO gt_body.
+
+  ENDLOOP.
+
+
+
+ENDFORM.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

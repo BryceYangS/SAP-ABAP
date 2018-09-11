@@ -1,0 +1,49 @@
+*&---------------------------------------------------------------------*
+*& Include ZRBIG20_22TOP                                     Report ZRBIG20_22
+*&
+*&---------------------------------------------------------------------*
+REPORT zrbig20_22 MESSAGE-ID k5.
+
+CLASS lcl_event_handler DEFINITION DEFERRED.
+
+**********************************************************************
+* TABLES
+**********************************************************************
+TABLES : scarr, spfli.
+
+**********************************************************************
+* Class instance
+**********************************************************************
+DATA : go_container TYPE REF TO cl_gui_docking_container,
+       go_alv_grid  TYPE REF TO cl_gui_alv_grid,
+
+       go_handler TYPE REF TO lcl_event_handler.
+
+**********************************************************************
+* Internal table and Work area
+**********************************************************************
+DATA : BEGIN OF gs_body,
+          carrid    TYPE scarr-carrid,    "Airlines
+          connid    TYPE spfli-connid,    "Connection
+          carrname  TYPE scarr-carrname,  "Airline name
+          cityfrom  TYPE spfli-cityfrom,
+          cityto    TYPE spfli-cityto,
+          url       TYPE scarr-url,
+       END OF gs_body.
+        "carrid connid ... url 이런 놈들이 FieldName에 들어갈 것들.
+
+DATA : gt_body LIKE TABLE OF gs_body.
+
+*-- For ALV
+DATA : gt_fcat   TYPE lvc_t_fcat,   "For ALV Column
+        " Table Type이기 때문에 TYPE만 써주면 된다.
+       gs_fcat   TYPE lvc_s_fcat,   "For ALV Column
+       gs_layout TYPE lvc_s_layo.   "For ALV design
+
+**********************************************************************
+* Common variable
+**********************************************************************
+DATA : gv_okcode  TYPE sy-ucomm.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

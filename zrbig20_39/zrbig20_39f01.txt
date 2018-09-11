@@ -1,0 +1,258 @@
+*&---------------------------------------------------------------------*
+*&  Include           ZRBIG20_39F01
+*&---------------------------------------------------------------------*
+*&---------------------------------------------------------------------*
+*&      Form  SET_INIT_VALUE
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM set_init_value .
+
+  p_rbukrs  = '1000'.
+  p_ryear   = sy-datum(4).
+  p_rldnr   = '0L'.
+  p_rvers   = '1'.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  GET_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM get_data .
+
+  DATA : lt_body LIKE gt_body.
+
+  CLEAR : gt_body.
+  SELECT *
+    INTO CORRESPONDING FIELDS OF TABLE gt_body
+    FROM faglflext
+    WHERE rbukrs  EQ p_rbukrs
+    AND   ryear   EQ p_ryear
+    AND   rldnr   EQ p_rldnr
+    AND   rvers   EQ p_rvers.
+
+
+*--  Get text table
+  IF gt_body IS NOT INITIAL.
+
+    lt_body = gt_body.
+    SORT lt_body BY racct ASCENDING.
+    DELETE ADJACENT DUPLICATES FROM lt_body COMPARING racct.
+
+    CLEAR : gt_skat.
+    SELECT *
+      INTO CORRESPONDING FIELDS OF TABLE gt_skat
+      FROM skat FOR ALL ENTRIES IN lt_body
+      WHERE saknr EQ lt_body-racct
+      AND   spras EQ sy-langu
+      AND   ktopl EQ 'CAIN'.
+
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  ADD_TEXT_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM add_text_data .
+  DATA : lv_tabix TYPE sy-tabix.
+
+  SORT gt_skat BY saknr ASCENDING.
+
+  LOOP AT gt_body INTO gs_body.
+
+    lv_tabix = sy-tabix.
+
+    CLEAR : gs_skat.
+    READ TABLE gt_skat INTO gs_skat WITH KEY saknr  = gs_body-racct
+      BINARY SEARCH.
+
+    gs_body-txt50 = gs_skat-txt50.
+
+    MODIFY gt_body FROM gs_body INDEX lv_tabix TRANSPORTING txt50.
+
+  ENDLOOP.
+
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  DATA_COLLECT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM data_collect .
+
+  DATA : lv_tabix TYPE sy-tabix.
+
+  LOOP AT gt_body INTO gs_body.
+
+    MOVE-CORRESPONDING gs_body TO gs_collect.
+
+    COLLECT gs_collect INTO gt_collect.
+    CLEAR gs_collect.
+
+  ENDLOOP.
+
+
+  CLEAR : gs_collect, gs_copy, gt_copy.
+  LOOP AT gt_collect INTO gs_collect.
+
+    CASE gs_collect-drcrk.
+      WHEN 'S'.
+        MOVE-CORRESPONDING gs_collect TO gs_copy.
+        gs_copy-hslvts = gs_collect-hslvt.
+      WHEN 'H' .
+        MOVE-CORRESPONDING gs_collect TO gs_copy.
+        gs_copy-hslvth = gs_collect-hslvt.
+    ENDCASE.
+
+    COLLECT gs_copy INTO gt_copy .
+    CLEAR   gs_copy.
+
+  ENDLOOP.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  DISPLAY_CONTROL
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM display_control .
+  PERFORM set_layout.
+
+  CLEAR : gs_fcat, gt_fcat.
+  PERFORM set_field_catalog USING :
+        "PK "FieldName      "Col text       "emphasize
+        ' ' 'HSLVTS'        'S'             ' ',
+        ' ' 'RACCT'         'RACCT'         ' ',
+        ' ' 'TXT50'         'TXT50'         'X',
+        ' ' 'HSLVTH'        'H'             ' '.
+
+  IF go_container IS INITIAL.
+
+    PERFORM create_obj.
+
+    SET HANDLER lcl_event_handler=>on_hotspot_click FOR go_alv_grid.
+
+    CALL METHOD go_alv_grid->set_table_for_first_display
+      EXPORTING
+        i_save                        = 'A'
+        i_default                     = 'X'
+        is_layout                     = gs_layout
+      CHANGING
+        it_outtab                     = gt_copy
+        it_fieldcatalog               = gt_fcat
+      EXCEPTIONS
+        invalid_parameter_combination = 1
+        program_error                 = 2
+        too_many_lines                = 3
+        OTHERS                        = 4.
+
+  ELSE.
+    CALL METHOD go_alv_grid->refresh_table_display.
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SET_LAYOUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM set_layout .
+
+  CLEAR : gs_layout.
+  gs_layout-zebra     = 'X'.
+  gs_layout-sel_mode  = 'D'.
+  gs_layout-cwidth_opt  = 'X'.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SET_FIELD_CATALOG
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_0207   text
+*      -->P_0208   text
+*      -->P_0209   text
+*      -->P_0210   text
+*----------------------------------------------------------------------*
+FORM set_field_catalog  USING  pv_key pv_fname pv_text pv_empha.
+
+  gs_fcat-key       = pv_key.
+  gs_fcat-fieldname = pv_fname.
+  gs_fcat-coltext   = pv_text.
+  gs_fcat-emphasize = pv_empha.
+
+  CASE pv_fname.
+    WHEN 'RACCT'.
+      gs_fcat-hotspot = 'X'.
+  ENDCASE.
+
+  APPEND gs_fcat TO gt_fcat.
+  CLEAR  gs_fcat.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  CREATE_OBJ
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM create_obj .
+
+  CREATE OBJECT go_container
+    EXPORTING
+      repid     = sy-repid
+      dynnr     = sy-dynnr
+      side      = go_container->dock_at_left
+      extension = 3000.
+
+  CREATE OBJECT go_alv_grid
+    EXPORTING
+      i_parent = go_container.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  ON_HOTSPOT_CLICK
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_E_ROW_ID  text
+*----------------------------------------------------------------------*
+FORM on_hotspot_click  USING    pv_row_id.
+
+  CLEAR : gs_copy.
+  READ TABLE gt_copy INTO gs_copy INDEX pv_row_id.
+
+  SUBMIT fagl_account_balance AND RETURN
+  WITH   racct  EQ gs_copy-racct
+  WITH   rbukrs EQ p_rbukrs
+  WITH   ryear  EQ p_ryear
+  WITH   rldnr  EQ p_rldnr.
+
+ENDFORM.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

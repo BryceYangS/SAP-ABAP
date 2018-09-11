@@ -1,0 +1,44 @@
+*&---------------------------------------------------------------------*
+*& Report  ZRBIG20_33
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+INCLUDE zrbig20_33top                           .    " global Data
+
+* INCLUDE ZRBIG20_33O01                           .  " PBO-Modules
+* INCLUDE ZRBIG20_33I01                           .  " PAI-Modules
+*INCLUDE zrbig20_33f01                           .  " FORM-Routines
+
+START-OF-SELECTION.
+
+*-- Get base data
+  CLEAR : gt_scarr.
+  SELECT *
+    INTO CORRESPONDING FIELDS OF TABLE gt_scarr
+    FROM scarr
+    WHERE carrid  IN s_carrid.
+
+  IF sy-subrc EQ 0.
+
+*-- Export to ABAP Memory (Local memory)
+    CLEAR : gs_scarr.
+    READ TABLE gt_scarr INTO gs_scarr INDEX 2.
+
+    EXPORT
+      gs_scarr FROM gs_scarr
+    " FROM 앞은 Memory를 어떤 모양으로 할당할 것인가
+    " FROM 뒤는 앞에서 선언한 layout에 대한 Data를 담고 있는 것들.
+      gt_scarr
+      "layout과 data가 들어있는 object가 동일하면 FROM을 굳이 안써줘도 됨.
+      TO MEMORY ID 'B05'.
+
+*-- Goto target program
+    SUBMIT zrbig20_34 AND RETURN.
+
+  ENDIF.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

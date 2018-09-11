@@ -1,0 +1,49 @@
+*&---------------------------------------------------------------------*
+*& Report  ZRBIG20_53
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+INCLUDE zrbig20_53top                           .    " global Data
+INCLUDE zrbig20_53s01.
+INCLUDE zrbig20_53c01.
+INCLUDE zrbig20_53o01                           .  " PBO-Modules
+INCLUDE zrbig20_53i01                           .  " PAI-Modules
+INCLUDE zrbig20_53f01                           .  " FORM-Routines
+
+
+**********************************************************************
+* INITIALIZATION
+**********************************************************************
+INITIALIZATION.
+  PERFORM set_init_value.
+
+**********************************************************************
+* START-OF-SELECTION
+**********************************************************************
+START-OF-SELECTION.
+  PERFORM get_data.
+  PERFORM make_display_data.
+
+  IF gt_body IS NOT INITIAL.
+    CALL SCREEN 100.
+  ELSE.
+    MESSAGE s037 DISPLAY LIKE 'E'.
+  ENDIF.
+
+*GUI Texts
+*----------------------------------------------------------
+* TITLE100 --> AR Open item list
+* TITLE110 --> AR Open item list document
+
+
+*Messages
+*----------------------------------------------------------
+*
+* Message class: K5
+*037   데이타가 없습니다.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

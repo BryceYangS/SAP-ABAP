@@ -1,0 +1,147 @@
+*&---------------------------------------------------------------------*
+*&  Include           ZRBIG20_17F01
+*&---------------------------------------------------------------------*
+*&---------------------------------------------------------------------*
+*&      Form  SET_INIT_VALUE
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM set_init_value .
+  s_carrid-sign     = 'I'.
+  s_carrid-option   = 'BT'.
+  s_carrid-low      = 'AA'.
+  s_carrid-high     = 'LH'.
+  APPEND s_carrid.
+  CLEAR  s_carrid.
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  GET_AIRLINE_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM get_airline_data .
+*-- get_airline_data
+  CLEAR : gs_scarr, gt_scarr.
+  "항상 쓰기 전에 CLEAR!!!
+
+  SELECT *
+    INTO CORRESPONDING FIELDS OF TABLE gt_scarr
+    FROM scarr
+    WHERE carrid IN s_carrid.
+
+  IF gt_scarr IS INITIAL.
+    MESSAGE s037 DISPLAY LIKE 'E'.
+    STOP.
+  ENDIF.
+
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  CHECK_PARAM
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM check_param .
+
+*-- Master code check
+  DATA : ls_scarr TYPE scarr.
+
+  CHECK p_carrid IS NOT INITIAL.
+  " low 값이 있느냐를 체크하라는 것. 만족하면 진행해라. 만족하지 않으면 실행하지않고 빠져나온다.
+
+
+  CLEAR ls_scarr.
+  SELECT SINGLE *
+    INTO CORRESPONDING FIELDS OF ls_scarr "SELECT SINGLE 이면 Work area에 넣어줘야 한다
+    FROM scarr
+    WHERE carrid EQ p_carrid.
+
+  " s_carrid-low의 값과 똑같은 것을 조회해서 나오지 않으면 에러 메시지 출력
+  IF sy-subrc NE 0.
+    MESSAGE s001 WITH TEXT-e01 DISPLAY LIKE 'E'.
+    STOP.
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SET_LAYOUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM set_layout .
+  CLEAR : gs_layout.
+  gs_layout-zebra       = 'X'.
+  gs_layout-sel_mode    = 'D'.
+  gs_layout-grid_title  = 'MR.YANG ZZANG'.
+  gs_layout-smalltitle  = 'X'.
+  gs_layout-cwidth_opt  = 'X'.
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  CREATE_OBJ
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM create_obj .
+
+  CREATE OBJECT go_container
+    EXPORTING
+      repid     = sy-repid
+      dynnr     = sy-dynnr
+      side      = go_container->dock_at_left
+      extension = 3000.
+
+  "screen fielter에 넣을 이름과 동일하게
+  "반드시 대문자!!!!
+
+  CREATE OBJECT go_alv_grid
+    EXPORTING
+      i_parent = go_container.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  INIT_SCREEN
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM init_screen .
+  PERFORM set_layout.
+
+  IF go_container IS INITIAL.
+    PERFORM create_obj.
+
+    CALL METHOD go_alv_grid->set_table_for_first_display
+      EXPORTING
+        i_structure_name = 'SCARR'
+        i_save           = 'A'
+        i_default        = 'X'
+        is_layout        = gs_layout
+      CHANGING
+        it_outtab        = gt_scarr.
+
+  ELSE.
+    CALL METHOD go_alv_grid->refresh_table_display.
+  ENDIF.
+
+
+ENDFORM.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

@@ -1,0 +1,103 @@
+*&---------------------------------------------------------------------*
+*&  Include           ZRBIG20_66F01
+*&---------------------------------------------------------------------*
+*&---------------------------------------------------------------------*
+*&      Form  EXEC_ADBC
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM exec_adbc .
+
+*-- For ADBC
+  DATA : lo_conn    TYPE REF TO cl_sql_connection,
+         lo_stmt    TYPE REF TO cl_sql_statement,
+         lo_result  TYPE REF TO cl_sql_result_set.
+
+*-- For SQL
+  DATA : lv_sql     TYPE string, " <-- For Query
+         lv_text    TYPE string. " <-- For error message
+
+  DATA : lo_root    TYPE REF TO cx_root,
+         lr_data    TYPE REF TO data.
+
+*-- Process ADBC
+  TRY .
+*-- Get connection
+*    CALL METHOD cl_sql_connection=>get_connection
+*      EXPORTING " DB01 -> DBConnections 탭 클릭하면 어떤 것에 연결할지 알 수 있음.
+*        con_name = 'HDB' "소문자 하지 말구~
+*      RECEIVING
+*        con_ref  = lo_conn.
+
+    lo_conn = cl_sql_connection=>get_connection( 'FREEMAN' ).
+
+
+*-- Make query
+    CLEAR lv_sql.
+*    lv_sql = | SELECT *                        | &
+*             |    FROM sapabap1.spfli          | &
+*             |    WHERE mandt  = '{ sy-mandt }'| & " Dynamic Parameter : Use {}
+*             |    AND   carrid = '{ p_carrid }'|.
+ " Procedure를 이용할 수 있음.
+    lv_sql = | CALL FREEMAN."EH8_FREEMAN::airline_schedule" | &
+             | ('{ sy-mandt }', '{ p_carrid }', '0400', NULL) |.
+
+
+
+*-- Create statement
+" 실행하기 위해 Statement.. Connection 정보가 필요하기 떄문에 Exporting .
+    CREATE OBJECT lo_stmt
+      EXPORTING
+        con_ref = lo_conn.
+
+*-- Execute SQL
+    CLEAR lo_result.
+*    CALL METHOD lo_stmt->execute_query
+*      EXPORTING
+*        statement   = lv_sql
+*      RECEIVING
+*        result_set  = lo_result.
+    lo_result = lo_stmt->execute_query( lv_sql ).
+
+
+*-- Set Internal table layout
+    CLEAR : gt_spfli.
+    GET REFERENCE OF gt_spfli INTO lr_data.
+
+*-- Get result_set data
+
+*    CALL METHOD lo_result->set_param_table
+*      EXPORTING
+*        itab_ref             = lr_data
+*        corresponding_fields =
+*        lob_fields           =
+        .
+    lo_result->set_param_table( lr_data ).
+    lo_result->next_package( ).
+    lo_result->close( ).
+
+
+
+
+  CATCH cx_sql_exception INTO lo_root.
+    CLEAR lv_text.
+    lv_text = lo_root->get_text( ).
+  ENDTRY.
+
+*-- Display error message
+  IF lv_text IS NOT INITIAL.
+    MESSAGE s001(k5) WITH lv_text DISPLAY LIKE 'E'.
+    STOP.
+  ENDIF.
+
+  LOOP AT gt_spfli INTO gs_spfli.
+    WRITE :/ gs_spfli-carrid, gs_spfli-cityfrom, gs_spfli-cityto.
+  ENDLOOP.
+
+ENDFORM.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

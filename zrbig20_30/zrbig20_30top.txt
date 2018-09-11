@@ -1,0 +1,55 @@
+*&---------------------------------------------------------------------*
+*& Include ZRBIG20_30TOP                                     Report ZRBIG20_30
+*&
+*&---------------------------------------------------------------------*
+REPORT zrbig20_30 MESSAGE-ID k5 LINE-SIZE 500.
+
+
+**********************************************************************
+* Internal table and Work area
+**********************************************************************
+DATA : BEGIN OF gs_body,
+         mjahr TYPE mkpf-mjahr, " Dup
+         mblnr TYPE mkpf-mblnr, " Dup
+         awsys TYPE mkpf-awsys,
+         matnr TYPE mseg-matnr,
+         werks TYPE mseg-werks,
+         name1 TYPE t001w-name1,
+         dmbtr TYPE mseg-dmbtr,
+         waers TYPE mseg-waers,
+         icon  TYPE icon-id,
+         col(4),
+       END OF gs_body,
+
+       gs_t001w TYPE t001w.
+
+
+DATA : gt_body LIKE TABLE OF gs_body,
+       gt_t001w LIKE TABLE OF gs_t001w.
+
+**********************************************************************
+* Class instance
+**********************************************************************
+DATA : go_container TYPE REF TO cl_gui_docking_container,
+       go_alv_grid  TYPE REF TO cl_gui_alv_grid.
+
+**********************************************************************
+* Layout & Sort
+**********************************************************************
+DATA : gs_layout  TYPE lvc_s_layo,
+       gt_sort    TYPE lvc_t_sort,
+       gs_sort    LIKE LINE OF gt_sort.
+
+**********************************************************************
+* Field Catalog
+**********************************************************************
+DATA : gs_fcat TYPE LINE OF lvc_t_fcat,
+       gt_fcat LIKE TABLE OF gs_fcat.
+
+**********************************************************************
+* Common Variable
+**********************************************************************
+DATA : gv_okcode  TYPE sy-ucomm.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

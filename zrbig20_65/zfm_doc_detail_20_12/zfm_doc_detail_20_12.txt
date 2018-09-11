@@ -1,0 +1,17 @@
+FUNCTION ZFM_DOC_DETAIL_20_12.
+*"----------------------------------------------------------------------
+*"*"Local Interface:
+*"  IMPORTING
+*"     REFERENCE(I_VBELN) TYPE  VBAP-VBELN
+*"  TABLES
+*"      T_VBAP STRUCTURE  VBAP
+*"----------------------------------------------------------------------
+
+
+PERFORM get_data TABLES t_vbap USING i_vbeln.
+
+
+ENDFUNCTION.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

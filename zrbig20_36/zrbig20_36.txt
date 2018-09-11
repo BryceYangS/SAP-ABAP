@@ -1,0 +1,39 @@
+*&---------------------------------------------------------------------*
+*& Report  ZRBIG20_36
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+INCLUDE zrbig20_36top                           .    " global Data
+INCLUDE zrbig20_36s01.
+* INCLUDE ZRBIG20_36O01                           .  " PBO-Modules
+* INCLUDE ZRBIG20_36I01                           .  " PAI-Modules
+INCLUDE zrbig20_36f01                           .  " FORM-Routines
+
+**********************************************************************
+* INITIALIZATION
+**********************************************************************
+INITIALIZATION.
+  PERFORM set_init_value.
+
+
+**********************************************************************
+* START-OF-SELECTION
+**********************************************************************
+START-OF-SELECTION.
+
+CASE 'X'.
+  WHEN p_scarr.
+    PERFORM get_scarr_data.
+  WHEN p_spfli.
+    PERFORM get_spfli_data.
+  WHEN p_flight.
+    PERFORM get_flight_data.
+  WHEN p_sbook.
+    PERFORM get_sbook_data.
+ENDCASE.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

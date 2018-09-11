@@ -1,0 +1,65 @@
+*&---------------------------------------------------------------------*
+*& Report  ZRBIG20_38
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+INCLUDE zrbig20_38top                           .    " global Data
+
+START-OF-SELECTION.
+
+  DATA : BEGIN OF gs_data,
+           name(10),
+           kind(10),
+           amt      TYPE i,
+         END OF gs_data.
+
+  DATA : gs_collect LIKE gs_data,
+         gt_data    LIKE TABLE OF gs_data,
+         gt_collect LIKE TABLE OF gs_data.
+
+*-- Sample data append
+  gs_data-name  = '홍길동'.
+  gs_data-kind  = '식대'.
+  gs_data-amt   = 1000.
+  APPEND gs_data TO gt_data.
+  CLEAR  gs_data.
+
+  gs_data-name  = '홍길동'.
+  gs_data-kind  = '식대'.
+  gs_data-amt   = 1000.
+  APPEND gs_data TO gt_data.
+  CLEAR  gs_data.
+
+  gs_data-name  = '심청'.
+  gs_data-kind  = '식대'.
+  gs_data-amt   = 1000.
+  APPEND gs_data TO gt_data.
+  CLEAR  gs_data.
+
+  gs_data-name  = '심청'.
+  gs_data-kind  = '식대'.
+  gs_data-amt   = 1000.
+  APPEND gs_data TO gt_data.
+  CLEAR  gs_data.
+
+  IF gt_data IS NOT INITIAL.
+
+    LOOP AT gt_data INTO gs_data.
+
+      MOVE-CORRESPONDING gs_data TO gs_collect.
+
+      COLLECT gs_collect INTO gt_collect.
+      CLEAR gs_collect.
+
+    ENDLOOP.
+
+    IF gt_collect IS INITIAL.
+
+    ENDIF.
+  ENDIF.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

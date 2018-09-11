@@ -1,0 +1,405 @@
+*&---------------------------------------------------------------------*
+*&  Include           ZRBIG20_29F01
+*&---------------------------------------------------------------------*
+*&---------------------------------------------------------------------*
+*&      Form  GET_SPFLI
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_T_SPFLI  text
+*      -->P_I_CARRID  text
+*      -->P_E_SUBRC  text
+*----------------------------------------------------------------------*
+FORM get_spfli  TABLES   pt_spfli STRUCTURE gs_spfli
+  "STRUCTURE => 글로벌 타입의 Work area이거나 ABAP Dic에서 생성한 table, structure만 가능
+                USING    pv_carrid pv_subrc.
+
+  SELECT *
+    INTO CORRESPONDING FIELDS OF TABLE pt_spfli
+    FROM spfli
+    WHERE carrid  EQ pv_carrid.
+
+  pv_subrc = sy-subrc.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SET_INIT_VALUE
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM set_init_value .
+  p_carrid = 'LH'.
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  GET_CONNECTION_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM get_connection_data .
+
+  "Pattern은 글로벌 클래스에서만 사용 가능.
+
+  DATA : lt_spfli TYPE TABLE OF spfli, "WITH HEADER LINE,
+         ls_spfli TYPE spfli,
+         lv_subrc TYPE sy-subrc.
+
+  "CHANGING 주의사항!!!
+  " Header line을 넣으면 안 된다!!???
+
+*-- Call Method (Short form)
+  go_airline->get_spfli( EXPORTING
+                            i_carrid  = p_carrid
+                         IMPORTING
+                            e_subrc   = lv_subrc
+                         CHANGING
+                            t_spfli   = lt_spfli ).
+
+*-- Call Method (Long form)
+*  CALL METHOD : go_airline->get_spfli
+*                EXPORTING
+*                  i_carrid  = p_carrid
+*                IMPORTING
+*                  e_subrc   = lv_subrc
+*                CHANGING
+*                  t_spfli   = lt_spfli. "[]. Headerline
+
+  IF lv_subrc EQ 0.
+    LOOP AT lt_spfli INTO ls_spfli.
+      WRITE :/
+        ls_spfli-carrid,    ls_spfli-connid, ls_spfli-countryfr,
+        ls_spfli-countryto, ls_spfli-fltime.
+    ENDLOOP.
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  GET_SCARR
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_T_SCARR  text
+*      -->P_I_CARRID  text
+*----------------------------------------------------------------------*
+FORM get_scarr  TABLES   pt_scarr STRUCTURE gs_scarr
+                                          " scarr에 icon을 추가했기 때문에 scarr하면 안됩니다.
+                USING    pv_carrid.
+
+*-- Table index For Looping internal table
+  DATA : lv_tabix TYPE sy-tabix.
+
+*-- Get data of scarr
+  SELECT *
+    INTO CORRESPONDING FIELDS OF TABLE pt_scarr
+    FROM scarr
+    WHERE carrid  EQ pv_carrid.
+
+  IF sy-subrc EQ 0.
+
+*-- Looping To add data to 'icon' column
+    LOOP AT pt_scarr.
+      " Header line이 있는 itab
+      lv_tabix = sy-tabix.
+
+      CASE pt_scarr-carrid.
+        WHEN 'AA'.
+          pt_scarr-icon = icon_cancel.
+        WHEN 'LH'.
+          pt_scarr-icon = icon_flight.
+        WHEN OTHERS.
+          pt_scarr-icon = icon_ws_ship.
+      ENDCASE.
+
+      MODIFY pt_scarr INDEX lv_tabix TRANSPORTING icon.
+
+    ENDLOOP.
+
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  GET_AIRLINE_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM get_airline_data .
+
+  DATA : lt_scarr TYPE tt_scarr,
+         ls_scarr TYPE ts_scarr.
+
+  go_airline->get_scarr( EXPORTING i_carrid = p_carrid
+                         CHANGING  t_scarr  = lt_scarr ).
+
+  LOOP AT lt_scarr INTO ls_scarr.
+    WRITE :/
+      ls_scarr-icon,     ls_scarr-carrid,
+      ls_scarr-carrname, ls_scarr-url.
+  ENDLOOP.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  GET_SFLIGHT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_T_SFLIGHT  text
+*      -->P_I_CARRID  text
+*----------------------------------------------------------------------*
+FORM get_sflight  TABLES   pt_sflight STRUCTURE gs_sflight
+                  USING    pv_carrid pv_msg pv_subrc.
+
+  DATA : lv_tabix    TYPE sy-tabix,
+         lv_dbcnt(3) TYPE n.
+
+  SELECT *
+    INTO CORRESPONDING FIELDS OF TABLE pt_sflight
+    FROM sflight
+    WHERE carrid EQ pv_carrid.
+
+  lv_dbcnt  = sy-dbcnt.
+  pv_subrc  = sy-subrc.
+
+  IF lv_dbcnt GT 0.
+*    pv_msg  =  sy-dbcnt && TEXT-s01.
+
+    CONCATENATE 'Total' lv_dbcnt TEXT-s01 INTO pv_msg
+                                          SEPARATED BY space.
+    " sy-dbcnt 를 바로 합할 경우
+    " Error!! => "DBCNT" must be a character-like data object (data type C, N, D, T, or STRING).
+    " 그래서 lv_dbcnt 변수를 만들어서 거기에 sy-dbcnt를 넣어줌.
+    " Conatenate는 공백 없이 합해줌 ==> Separated by 를 사용!!
+    " space : 공백을 줘라
+  ELSE.
+    pv_msg  = TEXT-e01.
+    "No data found
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  GET_FLIGHT_SCHEDULE_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM get_flight_schedule_data .
+
+  DATA : lv_msg(50),
+         lv_subrc TYPE sy-subrc.
+
+  CLEAR : gt_sflight, gs_sflight.
+  CALL METHOD go_airline->get_sflight
+    EXPORTING
+      i_carrid  = p_carrid
+    IMPORTING
+      e_msg     = lv_msg
+      e_subrc   = lv_subrc
+    CHANGING
+      t_sflight = gt_sflight.
+  " 메소드 호출 순서 : EXPORTING -> IMPORTING -> CHANGING.
+
+  IF lv_subrc EQ 0.
+
+    MESSAGE s001 WITH lv_msg.
+
+    LOOP AT gt_sflight INTO gs_sflight.
+
+      WRITE :/
+        gs_sflight-carrid,  gs_sflight-connid,  gs_sflight-fldate,
+        gs_sflight-price,   gs_sflight-currency.
+
+    ENDLOOP.
+
+  ELSE.
+    MESSAGE s001 WITH lv_msg DISPLAY LIKE 'E'.
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  GET_SBOOK
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_T_SBOOK  text
+*      -->P_I_CARRID  text
+*----------------------------------------------------------------------*
+FORM get_sbook  TABLES   pt_sbook STRUCTURE gs_sbook
+                USING    pv_carrid pv_subrc.
+
+  DATA : lv_tabix TYPE sy-tabix.
+
+  SELECT *
+    INTO CORRESPONDING FIELDS OF TABLE pt_sbook
+    FROM sbook
+    WHERE carrid  EQ pv_carrid.
+
+  pv_subrc  = sy-subrc.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  GET_BOOKING_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM get_booking_data .
+
+  DATA : lv_subrc TYPE sy-subrc.
+
+*-- Call Static Method
+  CLEAR : gt_sbook, gs_sbook.
+  lcl_airline_info=>get_sbook( EXPORTING i_carrid = p_carrid
+                               IMPORTING e_subrc  = lv_subrc
+                               CHANGING  t_sbook  = gt_sbook ).
+  " CALL METHOD lcl_airline_info=>get_sbook ( ... ) ; 이렇게도 가능.
+
+
+  IF lv_subrc EQ 0.
+
+    LOOP AT gt_sbook INTO gs_sbook.
+
+      WRITE :/
+        gs_sbook-carrid,  gs_sbook-connid,
+        gs_sbook-fldate,  gs_sbook-smoker.
+
+    ENDLOOP.
+
+  ELSE.
+    MESSAGE s037 DISPLAY LIKE 'E'.
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  GET_AIRLINE_INFO_GLOBAL
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM get_airline_info_global .
+  DATA : lv_subrc TYPE sy-subrc.
+
+  CLEAR : gt_scarr2, gs_scarr2.
+  CALL METHOD go_airline2->get_airline_master
+    EXPORTING
+      i_carrid = p_carrid
+    IMPORTING
+      e_subrc  = lv_subrc
+    CHANGING
+      t_scarr  = gt_scarr2.
+
+  IF  lv_subrc EQ 0.
+    CLEAR : gs_scarr2.
+    LOOP AT gt_scarr2 INTO gs_scarr2.
+      WRITE :/
+        gs_scarr2-carrid, gs_scarr2-carrname, gs_scarr2-url.
+    ENDLOOP.
+  ELSE.
+    MESSAGE s037 DISPLAY LIKE 'E'.
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  GET_CONNECTION_DATA_GLOBAL
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM get_connection_data_global .
+
+  DATA : lv_subrc TYPE sy-subrc.
+
+  CLEAR : gt_spfli2, gs_spfli2.
+  CALL METHOD zcl_airline_info20_01=>get_connection_data
+    EXPORTING
+      i_carrid = p_carrid
+    IMPORTING
+      e_subrc  = lv_subrc
+    CHANGING
+      t_spfli  = gt_spfli2.
+
+  IF gt_spfli2 IS NOT INITIAL.
+    LOOP AT gt_spfli2 INTO gs_spfli2.
+      WRITE:/
+       gs_spfli2-carrid, gs_spfli2-connid, gs_spfli2-countryfr.
+    ENDLOOP.
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  GET_SFLIGHT_DATA_GLOBAL
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM get_sflight_data_global .
+
+  DATA : lv_subrc TYPE sy-subrc.
+
+  CLEAR : gt_sflight2, gs_sflight2.
+  CALL METHOD go_airline2->get_flight_data
+    EXPORTING
+      i_carrid  = p_carrid
+    IMPORTING
+      e_subrc   = lv_subrc
+    CHANGING
+      t_sflight = gt_sflight2.
+  .
+
+  IF gt_sflight2 IS NOT INITIAL.
+    LOOP AT gt_sflight2 INTO gs_sflight2.
+      WRITE :/
+       gs_sflight2-carrid, gs_sflight2-connid, gs_sflight2-planetype.
+    ENDLOOP.
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  GET_BOOKING_DATA_GLBAL
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM get_booking_data_glbal .
+
+  DATA : lv_subrc TYPE sy-subrc.
+
+  CLEAR : gt_sbook2, gs_sbook2.
+  CALL METHOD zcl_airline_info20_01=>get_booking_data
+    EXPORTING
+      i_carrid = p_carrid
+    IMPORTING
+      e_subrc  = lv_subrc
+    CHANGING
+      t_sbook  = gt_sbook2.
+
+  IF gt_sbook2 IS NOT INITIAL.
+    LOOP AT gt_sbook2 INTO gs_sbook2.
+      WRITE :/
+       gs_sbook2-carrid, gs_sbook2-customid, gs_sbook2-fldate.
+    ENDLOOP.
+
+  ENDIF.
+
+ENDFORM.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

@@ -1,0 +1,49 @@
+*&---------------------------------------------------------------------*
+*& Report  ZRBIG20_03
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+INCLUDE zrbig20_03_top                          .    " global Data
+INCLUDE zrbig20_03_s01.
+INCLUDE zrbig20_03_f01                          .  " FORM-Routines
+
+
+INITIALIZATION.
+  PERFORM set_init_value.
+
+AT SELECTION-SCREEN OUTPUT.
+
+AT SELECTION-SCREEN.
+  PERFORM check_validation.
+  PERFORM button_action.
+
+START-OF-SELECTION.
+  PERFORM display_data.
+
+  SKIP.
+
+  SELECT * FROM scarr INTO gs_scarr WHERE carrid = p_carrid.
+  WRITE :
+
+    '¾çÈ£¼®Â¯',
+    gs_scarr-carrid, / ,
+    gs_scarr-carrname,
+    gs_scarr-currcode,
+    gs_scarr-url.
+ENDSELECT.
+
+
+*Messages
+*----------------------------------------------------------
+*
+* Message class: Hard coded
+*   Please Insert LH
+*
+* Message class: K5
+*001   & & & &
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

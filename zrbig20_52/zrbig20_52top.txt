@@ -1,0 +1,62 @@
+*&---------------------------------------------------------------------*
+*& Include ZRBIG20_52TOP                                     Report ZRBIG20_52
+*&
+*&---------------------------------------------------------------------*
+REPORT zrbig20_52 MESSAGE-ID k5.
+
+**********************************************************************
+* Internal table and Work area
+**********************************************************************
+DATA : BEGIN OF gs_body,
+         mjahr TYPE mkpf-mjahr,
+         mblnr TYPE mkpf-mblnr,
+         awsys TYPE mkpf-awsys,
+         stext TYPE tbdlst-stext,
+         vgart TYPE mkpf-vgart,
+         ltext TYPE t158w-ltext,
+         xblnr TYPE mkpf-xblnr,
+         budat TYPE mkpf-budat,
+       END OF gs_body,
+
+       gs_mseg   TYPE mseg,
+       gs_tbdlst TYPE tbdlst,
+       gs_t158w  TYPE t158w,
+       gs_mkpf   TYPE mkpf.
+
+DATA : gt_body   LIKE TABLE OF gs_body,
+       gt_mseg   LIKE TABLE OF gs_mseg,
+       gt_tbdlst LIKE TABLE OF gs_tbdlst,
+       gt_t158w  LIKE TABLE OF gs_t158w,
+       gt_mkpf   LIKE TABLE OF gs_mkpf,
+
+**********************************************************************
+* Class instance
+**********************************************************************
+       go_container TYPE REF TO cl_gui_docking_container,
+       go_alv_grid  TYPE REF TO cl_gui_alv_grid,
+
+       go_pop_con   TYPE REF TO cl_gui_custom_container,
+       go_pop_grid  TYPE REF TO cl_gui_alv_grid,
+
+**********************************************************************
+* Layout & Sort & Field catalog
+**********************************************************************
+       gs_layo      TYPE lvc_s_layo,
+       gs_sort      TYPE lvc_s_sort,
+       gt_sort      LIKE TABLE OF gs_sort,
+       gs_fcat      TYPE lvc_s_fcat,
+       gt_fcat      LIKE TABLE OF gs_fcat,
+
+       gs_pop_layo  TYPE lvc_s_layo,
+       gs_pop_sort  TYPE lvc_s_sort,
+       gt_pop_sort  LIKE TABLE OF gs_pop_sort,
+       gs_pop_fcat  TYPE lvc_s_fcat,
+       gt_pop_fcat  LIKE TABLE OF gs_pop_fcat,
+
+**********************************************************************
+* Common variable
+**********************************************************************
+       gv_okcode    TYPE sy-ucomm.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

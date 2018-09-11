@@ -1,0 +1,462 @@
+*&---------------------------------------------------------------------*
+*&  Include           ZRBIG20_59F01
+*&---------------------------------------------------------------------*
+*&---------------------------------------------------------------------*
+*&      Form  SET_INIT_VALUE
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM set_init_value .
+  p_gstrp = space.
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  GET_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM get_data .
+
+  DATA : lt_afko LIKE gt_afko.
+
+  CLEAR : gt_afko.
+  SELECT *
+    INTO CORRESPONDING FIELDS OF TABLE gt_afko
+    FROM afko
+    WHERE gstrp EQ p_gstrp.
+
+  IF gt_afko IS NOT INITIAL.
+
+    CLEAR : lt_afko.
+    lt_afko = gt_afko.
+
+    SORT lt_afko BY plnty ASCENDING.
+    DELETE ADJACENT DUPLICATES FROM lt_afko COMPARING plnty.
+
+    CLEAR : gt_tca02.
+    SELECT *
+      INTO CORRESPONDING FIELDS OF TABLE gt_tca02
+      FROM tca02
+      FOR ALL ENTRIES IN lt_afko
+      WHERE plnty EQ lt_afko-plnty
+      AND   spras EQ sy-langu.
+
+    CLEAR : lt_afko.
+    lt_afko = gt_afko.
+
+    SORT lt_afko BY plnbez ASCENDING.
+    DELETE ADJACENT DUPLICATES FROM lt_afko COMPARING plnbez.
+
+    CLEAR : gt_makt.
+    SELECT *
+      INTO CORRESPONDING FIELDS OF TABLE gt_makt
+      FROM makt
+      FOR ALL ENTRIES IN lt_afko
+      WHERE matnr EQ lt_afko-plnbez
+      AND   spras EQ sy-langu.
+
+  ELSE.
+    MESSAGE s037 DISPLAY LIKE 'E'.
+    STOP.
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  MAKE_DISPLAY_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM make_display_data .
+
+  DATA : lv_taxix TYPE sy-tabix.
+
+  SORT : gt_tca02 BY plnty ASCENDING,
+         gt_makt  BY matnr ASCENDING.
+
+  CLEAR : gs_afko.
+  LOOP AT gt_afko INTO gs_afko.
+
+    lv_taxix = sy-tabix.
+
+    CLEAR : gs_tca02.
+    READ TABLE gt_tca02 INTO gs_tca02 WITH KEY plnty = gs_afko-plnty
+         BINARY SEARCH.
+    gs_afko-txt = gs_tca02-txt.
+
+    CLEAR : gs_makt.
+    READ TABLE gt_makt INTO gs_makt WITH KEY matnr = gs_afko-plnbez
+         BINARY SEARCH.
+    gs_afko-maktx = gs_makt-maktx.
+
+    MODIFY gt_afko FROM gs_afko INDEX lv_taxix TRANSPORTING txt maktx.
+
+  ENDLOOP.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SAVE_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM save_data .
+
+  DATA : ls_save   TYPE ztbig20_18,
+         lt_save   LIKE TABLE OF ls_save,
+         ls_check  TYPE ztbig20_18,
+         lv_answer.
+
+  CALL FUNCTION 'POPUP_TO_CONFIRM'
+    EXPORTING
+      titlebar              = 'SAVE DATA'
+      text_question         = 'Are you sure to save?'
+      text_button_1         = TEXT-y01
+      text_button_2         = TEXT-n01
+      display_cancel_button = 'X'
+    IMPORTING
+      answer                = lv_answer.
+
+  IF lv_answer NE '1'.
+    EXIT.
+  ENDIF.
+
+
+  CLEAR : gs_afko, ls_save, lt_save.
+  LOOP AT gt_afko INTO gs_afko.
+
+    CLEAR : ls_save.
+    MOVE-CORRESPONDING gs_afko TO ls_save.
+
+    CLEAR: ls_check.
+    SELECT SINGLE *
+      INTO CORRESPONDING FIELDS OF ls_check
+      FROM ztbig20_18
+      WHERE aufnr EQ ls_save-aufnr.
+
+    IF sy-subrc EQ 0.
+      ls_save-erdat = ls_check-erdat.
+      ls_save-ernam = ls_check-ernam.
+      ls_save-erzet = ls_check-erzet.
+      ls_save-aedat = sy-datum.
+      ls_save-aenam = sy-uname.
+      ls_save-aezet = sy-uzeit.
+    ELSE.
+      ls_save-erdat = sy-datum.
+      ls_save-ernam = sy-uname.
+      ls_save-erzet = sy-uzeit.
+    ENDIF.
+
+    APPEND ls_save TO lt_save.
+
+  ENDLOOP.
+
+  MODIFY ztbig20_18 FROM TABLE lt_save.
+
+  IF sy-subrc EQ 0.
+    COMMIT WORK.
+    MESSAGE s102.
+  ELSE.
+    ROLLBACK WORK.
+    MESSAGE s001 WITH 'Save error'.
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  DISPLAY_SCREEN_100
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM display_screen_100 .
+
+  PERFORM set_layo.
+
+  CLEAR : gs_fcat, gt_fcat.
+  PERFORM set_fcat USING :
+        "pk   "FieldName    "Coltext            "emphasize
+        'X'   'AUFNR'        'Order No'         ' ',
+        ' '   'PLNBEZ'       'Material No'      ' ',
+        ' '   'MAKTX'        'Name'             'X',
+        ' '   'PLNTY'        'Task List'        ' ',
+        ' '   'TXT'          'Description'      'X',
+        ' '   'PLNNR'        'Task List Group'  ' '.
+
+  IF go_container IS INITIAL.
+
+    PERFORM create_obj.
+
+    SET HANDLER : lcl_event_handler=>double_click FOR go_alv_grid.
+
+    CALL METHOD go_alv_grid->set_table_for_first_display
+      EXPORTING
+        i_save                        = 'A'
+        i_default                     = 'X'
+        is_layout                     = gs_layo
+      CHANGING
+        it_outtab                     = gt_afko
+        it_fieldcatalog               = gt_fcat
+      EXCEPTIONS
+        invalid_parameter_combination = 1
+        program_error                 = 2
+        too_many_lines                = 3
+        OTHERS                        = 4.
+
+  ELSE.
+    CALL METHOD go_alv_grid->refresh_table_display.
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SET_LAYO
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM set_layo .
+
+  CLEAR : gs_layo.
+  gs_layo-zebra      = 'X'.
+  gs_layo-cwidth_opt = 'X'.
+  gs_layo-sel_mode   = 'D'.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SET_FCAT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_0299   text
+*      -->P_0300   text
+*      -->P_0301   text
+*      -->P_0302   text
+*----------------------------------------------------------------------*
+FORM set_fcat  USING  pv_k pv_f pv_c pv_e.
+
+  gs_fcat-key       = pv_k.
+  gs_fcat-fieldname = pv_f.
+  gs_fcat-coltext   = pv_c.
+  gs_fcat-emphasize = pv_e.
+
+  APPEND gs_fcat TO gt_fcat.
+  CLEAR :gs_fcat.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  CREATE_OBJ
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM create_obj .
+
+  CREATE OBJECT go_container
+    EXPORTING
+      repid     = sy-repid
+      dynnr     = sy-dynnr
+      side      = go_container->dock_at_left
+      extension = 3000.
+
+  CREATE OBJECT go_alv_grid
+    EXPORTING
+      i_parent = go_container.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  DOUBLE_CLICK
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_E_ROW  text
+*----------------------------------------------------------------------*
+FORM double_click  USING    pv_row.
+
+  DATA : lv_subrc TYPE sy-subrc.
+
+  CLEAR : gs_afko.
+  READ TABLE gt_afko INTO gs_afko INDEX pv_row.
+
+  CLEAR : gt_afpo.
+  CALL FUNCTION 'ZFM_DOC_DETAIL_20_09'
+    EXPORTING
+      i_aufnr = gs_afko-aufnr
+    IMPORTING
+      e_subrc = lv_subrc
+    TABLES
+      t_afpo  = gt_afpo.
+
+  IF lv_subrc EQ 0.
+    PERFORM get_text_data.
+    PERFORM make_display_pop_data.
+
+    CALL SCREEN 110 STARTING AT 03 03.
+
+  ELSE.
+    MESSAGE s037 DISPLAY LIKE 'E'.
+    EXIT.
+  ENDIF.
+
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  GET_TEXT_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM get_text_data .
+
+  DATA : lt_afpo LIKE gt_afpo.
+
+  CLEAR : lt_afpo.
+  lt_afpo = gt_afpo.
+
+  SORT lt_afpo BY pwerk ASCENDING.
+  DELETE ADJACENT DUPLICATES FROM lt_afpo COMPARING pwerk.
+
+  CLEAR : gt_t001w.
+  SELECT *
+    INTO CORRESPONDING FIELDS OF TABLE gt_t001w
+    FROM t001w
+    FOR ALL ENTRIES IN lt_afpo
+    WHERE werks EQ lt_afpo-pwerk.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  MAKE_DISPLAY_POP_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM make_display_pop_data .
+
+  DATA : lv_tabix TYPE sy-tabix.
+
+  SORT gt_t001w BY werks ASCENDING.
+
+  CLEAR : gs_afpo.
+  LOOP AT gt_afpo INTO gs_afpo.
+
+    lv_tabix = sy-tabix.
+
+    CLEAR : gs_t001w.
+    READ TABLE gt_t001w INTO gs_t001w WITH KEY werks = gs_afpo-pwerk
+                                      BINARY SEARCH.
+    gs_afpo-name1 = gs_t001w-name1.
+
+    MODIFY gt_afpo FROM gs_afpo INDEX lv_tabix TRANSPORTING name1.
+
+  ENDLOOP.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  DISPLAY_SCREEN_110
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM display_screen_110 .
+
+  PERFORM set_layo.
+
+  CLEAR : gs_pop_fcat, gt_pop_fcat.
+  PERFORM set_pop_fcat USING :
+        "pk     "FieldName    "Coltext              "emphasize
+        'X'     'AUFNR'       'SD Document'         ' ',
+        'X'     'POSNR'       'Item Number'         ' ',
+        ' '     'PSMNG'       'Quantity'            ' ',
+        ' '     'MEINS'       'Unit'                ' ',
+        ' '     'PWERK'       'Plant'               ' ',
+        ' '     'NAME1'       'Name1'               'X'.
+
+  IF go_pop_con IS INITIAL.
+    PERFORM create_obj_pop.
+
+    CALL METHOD go_pop_grid->set_table_for_first_display
+      EXPORTING
+        i_save                        = 'A'
+        i_default                     = 'X'
+        is_layout                     = gs_layo
+      CHANGING
+        it_outtab                     = gt_afpo
+        it_fieldcatalog               = gt_pop_fcat
+      EXCEPTIONS
+        invalid_parameter_combination = 1
+        program_error                 = 2
+        too_many_lines                = 3
+        OTHERS                        = 4.
+
+  ELSE.
+    CALL METHOD go_pop_grid->refresh_table_display.
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SET_POP_FCAT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_0616   text
+*      -->P_0617   text
+*      -->P_0618   text
+*      -->P_0619   text
+*----------------------------------------------------------------------*
+FORM set_pop_fcat  USING   pv_k pv_f pv_c pv_e.
+
+  gs_pop_fcat-key       = pv_k.
+  gs_pop_fcat-fieldname = pv_f.
+  gs_pop_fcat-coltext   = pv_c.
+  gs_pop_fcat-emphasize = pv_e.
+
+  CASE pv_f.
+    WHEN 'PSMNG'.
+      gs_pop_fcat-qfieldname = 'MEINS'.
+  ENDCASE.
+
+  APPEND gs_pop_fcat TO gt_pop_fcat.
+  CLEAR :gs_pop_fcat.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  CREATE_OBJ_POP
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM create_obj_pop .
+
+  CREATE OBJECT go_pop_con
+    EXPORTING
+      container_name = 'GO_CONT'.
+
+  CREATE OBJECT go_pop_grid
+    EXPORTING
+      i_parent = go_pop_con.
+
+ENDFORM.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

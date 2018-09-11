@@ -1,0 +1,514 @@
+*&---------------------------------------------------------------------*
+*&  Include           ZRBIG20_54F01
+*&---------------------------------------------------------------------*
+*&---------------------------------------------------------------------*
+*&      Form  SET_INIT_VALUE
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM set_init_value .
+
+  p_bukrs = '1000'.
+
+  s_bedat-sign   = 'I'.
+  s_bedat-option = 'BT'.
+  s_bedat-low    = '20180601'.
+  s_bedat-high   = sy-datum.
+  APPEND s_bedat.
+  CLEAR  s_bedat.
+
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  GET_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM get_data .
+
+  DATA : lt_ekko LIKE gt_ekko.
+
+*-- Get based data
+  CLEAR : gt_ekko.
+  SELECT *
+    INTO CORRESPONDING FIELDS OF TABLE gt_ekko
+    FROM ekko
+    WHERE bukrs EQ p_bukrs
+    AND   bedat IN s_bedat.
+
+  IF gt_ekko IS NOT INITIAL.
+
+*-- Get Account text data
+    CLEAR : lt_ekko.
+    lt_ekko = gt_ekko.
+
+    SORT lt_ekko BY lifnr ASCENDING.
+    DELETE ADJACENT DUPLICATES FROM lt_ekko COMPARING lifnr.
+
+    CLEAR : gt_lfa1.
+    SELECT *
+      INTO CORRESPONDING FIELDS OF TABLE gt_lfa1
+      FROM lfa1
+      FOR ALL ENTRIES IN lt_ekko
+      WHERE lifnr EQ lt_ekko-lifnr.
+
+*-- Get Description data
+    CLEAR : lt_ekko.
+    lt_ekko = gt_ekko.
+
+    SORT lt_ekko BY ekgrp ASCENDING.
+    DELETE ADJACENT DUPLICATES FROM lt_ekko COMPARING ekgrp.
+
+    CLEAR : gt_t024.
+    SELECT *
+      INTO CORRESPONDING FIELDS OF TABLE gt_t024
+      FROM t024
+      FOR ALL ENTRIES IN lt_ekko
+      WHERE ekgrp EQ lt_ekko-ekgrp.
+
+  ELSE.
+    MESSAGE s037 DISPLAY LIKE 'E'.
+    STOP.
+  ENDIF.
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  MAKE_DISPLAY_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM make_display_data .
+
+*-- Sort to use binary search
+  SORT : gt_t024 BY ekgrp ASCENDING,
+         gt_lfa1 BY lifnr ASCENDING.
+
+*-- Make display data ( gt_body )
+  CLEAR : gs_ekko, gt_body.
+  LOOP AT gt_ekko INTO gs_ekko.
+
+*-- Copy based data from based work area to gs_body
+    CLEAR : gs_body.
+    MOVE-CORRESPONDING gs_ekko TO gs_body.
+
+*-- Copy Description data from text data to gs_body
+    CLEAR : gs_t024.
+    READ TABLE gt_t024 INTO gs_t024 WITH KEY ekgrp = gs_body-ekgrp
+                                    BINARY SEARCH .
+    IF sy-subrc EQ 0.
+      gs_body-eknam = gs_t024-eknam.
+    ENDIF.
+
+*-- Copy Account text data from text data to gs_body
+    CLEAR : gs_lfa1.
+    READ TABLE gt_lfa1 INTO gs_lfa1 WITH KEY lifnr = gs_body-lifnr
+                                    BINARY SEARCH.
+    IF sy-subrc EQ 0.
+      gs_body-name1 = gs_lfa1-name1.
+    ENDIF.
+
+*-- Make internal table to display
+    APPEND gs_body TO gt_body.
+    CLEAR  gs_body.
+  ENDLOOP.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SAVE_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM save_data .
+
+  DATA : ls_save   TYPE ztbig20_16,
+         lt_save   LIKE TABLE OF ls_save,
+         ls_check  LIKE ls_save,
+         lv_answer.
+
+  CALL FUNCTION 'POPUP_TO_CONFIRM'
+    EXPORTING
+      titlebar              = 'DATA SAVE'
+      text_question         = ' Save the data?'
+      text_button_1         = 'Yeap'(001)
+*     ICON_BUTTON_1         = ' '
+      text_button_2         = 'Non'(002)
+*     ICON_BUTTON_2         = ' '
+      display_cancel_button = 'X'
+    IMPORTING
+      answer                = lv_answer.
+
+  IF lv_answer NE '1'.
+    EXIT.
+  ENDIF.
+
+  CLEAR : gs_body, lt_save.
+  LOOP AT gt_body INTO gs_body.
+
+    CLEAR : ls_save.
+    MOVE-CORRESPONDING gs_body TO ls_save.
+
+    ls_save-bukrs = p_bukrs.
+
+    CLEAR : ls_check.
+    SELECT SINGLE *
+      INTO CORRESPONDING FIELDS OF ls_check
+      FROM ztbig20_16
+      WHERE bukrs EQ ls_save-bukrs
+      AND   ebeln EQ ls_save-ebeln.
+
+    IF sy-dbcnt GT 0.
+      ls_save-erdat = ls_check-erdat.
+      ls_save-ernam = ls_check-ernam.
+      ls_save-erzet = ls_check-erzet.
+      ls_save-aedat = sy-datum.
+      ls_save-aenam = sy-uname.
+      ls_save-aezet = sy-uzeit.
+    ELSE.
+      ls_save-erdat = sy-datum.
+      ls_save-ernam = sy-uname.
+      ls_save-erzet = sy-uzeit.
+    ENDIF.
+
+    APPEND ls_save TO lt_save.
+    CLEAR  ls_save.
+
+  ENDLOOP.
+
+  MODIFY ztbig20_16 FROM TABLE lt_save.
+
+  IF sy-subrc EQ 0.
+    COMMIT WORK.
+    MESSAGE s102.
+  ELSE.
+    ROLLBACK WORK.
+    MESSAGE s001 WITH TEXT-e01 DISPLAY LIKE 'E'.
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  DISPLAY_SCREEN_100
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM display_screen_100 .
+
+  PERFORM set_layo.
+
+  CLEAR : gs_fcat, gt_fcat.
+  PERFORM set_fcat USING :
+        "pk   "FieldName      "Coltext          "emphasize
+        'X'   'EBELN'     'Document no'          ' ',
+        ' '   'BSART'     'Document type'        ' ',
+        ' '   'LIFNR'     'Vendor'               ' ',
+        ' '   'NAME1'     'Name'                 'X',
+        ' '   'BSTYP'     'BSTYP'                ' ',
+        ' '   'EKGRP'     'Purchase Group'       ' ',
+        ' '   'EKNAM'     'Description'          'X',
+        ' '   'EKORG'     'EKORG'                ' '.
+
+  IF go_container IS INITIAL.
+
+    PERFORM create_obj.
+
+
+    SET HANDLER lcl_event_handler=>double_click FOR go_alv_grid.
+
+    CALL METHOD go_alv_grid->set_table_for_first_display
+      EXPORTING
+        i_save                        = 'A'
+        i_default                     = 'X'
+        is_layout                     = gs_layo
+      CHANGING
+        it_outtab                     = gt_body
+        it_fieldcatalog               = gt_fcat
+*       it_sort                       =
+      EXCEPTIONS
+        invalid_parameter_combination = 1
+        program_error                 = 2
+        too_many_lines                = 3
+        OTHERS                        = 4.
+
+  ELSE.
+    CALL METHOD go_alv_grid->refresh_table_display.
+  ENDIF.
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SET_LAYO
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM set_layo .
+
+  CLEAR : gs_layo.
+  gs_layo-zebra      = 'X'.
+  gs_layo-sel_mode   = 'D'.
+  gs_layo-cwidth_opt = 'X'.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SET_FCAT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_0379   text
+*      -->P_0380   text
+*      -->P_0381   text
+*      -->P_0382   text
+*----------------------------------------------------------------------*
+FORM set_fcat  USING pv_k pv_f pv_c pv_e.
+
+  gs_fcat-key       = pv_k .
+  gs_fcat-fieldname = pv_f .
+  gs_fcat-coltext   = pv_c .
+  gs_fcat-emphasize = pv_e .
+
+  CASE pv_f.
+    WHEN  'BSTYP' OR 'EKORG' .
+      gs_fcat-no_out  = 'X'.
+    WHEN 'BSART' OR 'EKGRP'.
+      gs_fcat-just    = 'C'.
+  ENDCASE.
+
+  APPEND gs_fcat TO gt_fcat.
+  CLEAR  gs_fcat.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  CREATE_OBJ
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM create_obj .
+
+  CREATE OBJECT go_container
+    EXPORTING
+      repid     = sy-repid
+      dynnr     = sy-dynnr
+      side      = go_container->dock_at_left
+      extension = 3000.
+
+  CREATE OBJECT go_alv_grid
+    EXPORTING
+      i_parent = go_container.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  DOUBLE_CLICK
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_E_ROW  text
+*----------------------------------------------------------------------*
+FORM double_click  USING    pv_row.
+
+  DATA : lv_subrc TYPE sy-subrc.
+
+  CLEAR : gs_body.
+  READ TABLE gt_body INTO gs_body INDEX pv_row.
+
+*-- Get Purchasing Document Item data using function module
+  CLEAR : gt_ekpo.
+  CALL FUNCTION 'ZFM_DOC_DETAIL_20_07'
+    EXPORTING
+      i_ebeln = gs_body-ebeln
+    IMPORTING
+      e_subrc = lv_subrc
+    TABLES
+      t_ekpo  = gt_ekpo.
+
+  IF lv_subrc EQ 0.
+    PERFORM get_text_data.
+    PERFORM make_display_110_data.
+
+    CALL SCREEN 110 STARTING AT 03 03.
+  ELSE.
+    MESSAGE s037 DISPLAY LIKE 'E'.
+    EXIT.
+  ENDIF.
+
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  DISPLAY_SCREEN_110
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM display_screen_110 .
+
+  CLEAR : gs_pop_layo.
+  PERFORM set_pop_layo.
+
+  CLEAR : gs_pop_fcat, gt_pop_fcat.
+  PERFORM set_pop_fcat USING :
+        "pk   "FieldName      "Coltext        "emphasize
+        'X'   'EBELN'        'Document no'     ' ',
+        'X'   'EBELP'        'Item no'         ' ',
+        ' '   'MATNR'        'Material no'     ' ',
+        ' '   'MAKTX'        'Description'     'X',
+        ' '   'TXZ01'        'Short text'      ' '.
+
+  IF go_pop_con IS INITIAL.
+
+    PERFORM create_obj_pop.
+
+    CALL METHOD go_pop_grid->set_table_for_first_display
+      EXPORTING
+        i_save                        = 'A'
+        i_default                     = 'X'
+        is_layout                     = gs_pop_layo
+      CHANGING
+        it_outtab                     = gt_pop_body
+        it_fieldcatalog               = gt_pop_fcat
+*       it_sort                       =
+      EXCEPTIONS
+        invalid_parameter_combination = 1
+        program_error                 = 2
+        too_many_lines                = 3
+        OTHERS                        = 4.
+
+  ELSE.
+    CALL METHOD go_pop_grid->refresh_table_display.
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SET_POP_LAYO
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM set_pop_layo .
+
+  gs_pop_layo-zebra      = 'X'.
+  gs_pop_layo-cwidth_opt = 'X'.
+  gs_pop_layo-sel_mode   = 'D'.
+  gs_pop_layo-no_toolbar = 'X'.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  GET_TEXT_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM get_text_data .
+
+  DATA : lt_ekpo LIKE gt_ekpo.
+
+  CLEAR : lt_ekpo.
+  lt_ekpo = gt_ekpo.
+
+  SORT lt_ekpo BY matnr ASCENDING.
+  DELETE ADJACENT DUPLICATES FROM lt_ekpo COMPARING matnr.
+
+  CLEAR : gt_makt.
+  SELECT *
+    INTO CORRESPONDING FIELDS OF TABLE gt_makt
+    FROM makt
+    FOR ALL ENTRIES IN lt_ekpo
+    WHERE matnr EQ lt_ekpo-matnr
+    AND   spras EQ sy-langu.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  MAKE_DISPLAY_110_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM make_display_110_data .
+
+  SORT : gt_makt BY matnr ASCENDING.
+
+  CLEAR : gs_ekpo, gt_pop_body.
+  LOOP AT gt_ekpo INTO gs_ekpo.
+
+    CLEAR : gs_pop_body.
+    MOVE-CORRESPONDING gs_ekpo TO gs_pop_body.
+
+    CLEAR : gs_makt.
+    READ TABLE gt_makt INTO gs_makt WITH KEY matnr = gs_pop_body-matnr
+                                    BINARY SEARCH.
+    IF sy-subrc EQ 0.
+      gs_pop_body-maktx = gs_makt-maktx.
+    ENDIF.
+
+    APPEND gs_pop_body TO gt_pop_body.
+    CLEAR  gs_pop_body.
+
+  ENDLOOP.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SET_POP_FCAT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_0634   text
+*      -->P_0635   text
+*      -->P_0636   text
+*      -->P_0637   text
+*----------------------------------------------------------------------*
+FORM set_pop_fcat  USING  pv_k pv_f pv_c pv_e.
+
+  gs_pop_fcat-key        = pv_k .
+  gs_pop_fcat-fieldname  = pv_f .
+  gs_pop_fcat-coltext    = pv_c .
+  gs_pop_fcat-emphasize  = pv_e .
+
+  APPEND gs_pop_fcat TO gt_pop_fcat.
+  CLEAR  gs_pop_fcat.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  CREATE_OBJ_POP
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM create_obj_pop .
+
+  CREATE OBJECT go_pop_con
+    EXPORTING
+      container_name = 'GO_CONT'.
+
+  CREATE OBJECT go_pop_grid
+    EXPORTING
+      i_parent = go_pop_con.
+
+
+ENDFORM.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

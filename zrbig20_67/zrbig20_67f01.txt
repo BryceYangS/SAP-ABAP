@@ -1,0 +1,58 @@
+*&---------------------------------------------------------------------*
+*&  Include           ZRBIG20_67F01
+*&---------------------------------------------------------------------*
+*&---------------------------------------------------------------------*
+*&      Form  EXEC_ADBC
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM exec_adbc .
+
+  TRY .
+      CLEAR go_conn.
+      go_conn = cl_sql_connection=>get_connection( 'HDB' ).
+
+      CLEAR gv_sql.
+      gv_sql = | SELECT *                                   | &
+               |    FROM sapabap1.bkpf                      | &
+               |    WHERE mandt = '{ sy-mandt }'            | &
+               |    AND   bukrs = '{ p_bukrs }'             | &
+               |    AND   gjahr = '{ p_gjahr }'             | &
+               |    AND   budat BETWEEN '{ s_budat-low }'   | &
+               |                AND     '{ s_budat-high }'  |.
+
+      CREATE OBJECT go_stmt
+        EXPORTING
+          con_ref = go_conn.
+
+      CLEAR : go_rs.
+      go_rs = go_stmt->execute_query( gv_sql ).
+
+      CLEAR : gt_bkpf.
+      GET REFERENCE OF gt_bkpf INTO gr_data.
+      go_rs->set_param_table( gr_data ).
+      go_rs->next_package( ).
+      go_rs->close( ).
+
+    CATCH cx_sql_exception INTO go_root.
+      CLEAR : gv_text.
+      gv_text = go_root->get_text( ).
+  ENDTRY.
+
+  IF gv_text IS NOT INITIAL.
+    MESSAGE s001(k5) WITH gv_text DISPLAY LIKE 'E'.
+    STOP.
+  ENDIF.
+
+  CLEAR : gs_bkpf.
+  LOOP AT gt_bkpf INTO gs_bkpf.
+    WRITE :/ gs_bkpf-bukrs , gs_bkpf-belnr, gs_bkpf-gjahr.
+  ENDLOOP.
+
+ENDFORM.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

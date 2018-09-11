@@ -1,0 +1,306 @@
+*&---------------------------------------------------------------------*
+*&  Include           ZRBIG20_20F01
+*&---------------------------------------------------------------------*
+*&---------------------------------------------------------------------*
+*&      Form  SET_INIT_VALUE
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM set_init_value .
+  p_carrid  = 'LH'.
+  LOOP AT SCREEN.
+    IF screen-group1  EQ 'CIT'.
+      screen-active = 0.
+    ELSE.
+      screen-active = 1.
+    ENDIF.
+    "OMG!!!!! 그만 좀 까먹어라!!!
+    MODIFY SCREEN.
+  ENDLOOP.
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SET_PARM_SELO
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM set_parm_selo .
+  LOOP AT SCREEN.
+    CASE 'X'.
+      WHEN p_scar.
+        IF screen-group1 EQ 'CIT'.
+          screen-active = 0.
+        ELSEIF screen-group1 EQ 'CUR'.
+          screen-active = 1.
+        ENDIF.
+      WHEN p_spfl.
+        IF screen-group1 EQ 'CUR'.
+          screen-active = 0.
+        ELSEIF screen-group1 EQ 'CIT'.
+          screen-active = 1.
+        ENDIF.
+    ENDCASE.
+    MODIFY SCREEN.
+  ENDLOOP.
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  CHECK_PARM
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM check_parm .
+  DATA : ls_scarr TYPE scarr,
+         ls_spfli TYPE spfli.
+
+  CASE 'X'.
+    WHEN p_scar.
+      CLEAR : ls_scarr.
+      IF s_curr-low IS NOT INITIAL.
+        SELECT SINGLE *
+          INTO CORRESPONDING FIELDS OF ls_scarr
+          FROM scarr
+          WHERE currcode EQ s_curr-low
+          AND   carrid   EQ p_carrid.
+        IF ls_scarr IS INITIAL.
+          gv_error = 'X'.
+        ENDIF.
+      ELSE.
+        SELECT SINGLE *
+         INTO CORRESPONDING FIELDS OF ls_scarr
+          FROM scarr
+          WHERE carrid EQ p_carrid.
+        IF ls_scarr IS INITIAL.
+          gv_error = 'X'.
+        ENDIF.
+      ENDIF.
+    WHEN p_spfl.
+      CLEAR : ls_spfli.
+      IF s_city-low IS NOT INITIAL.
+        SELECT SINGLE *
+          INTO CORRESPONDING FIELDS OF ls_spfli
+          FROM spfli
+          WHERE cityfrom EQ s_city-low
+          AND   carrid   EQ p_carrid.
+        IF ls_spfli IS INITIAL.
+          gv_error = 'X'.
+        ENDIF.
+      ELSE.
+        SELECT SINGLE *
+          INTO CORRESPONDING FIELDS OF ls_spfli
+          FROM spfli
+          WHERE carrid EQ p_carrid.
+        IF ls_spfli IS INITIAL.
+          gv_error = 'X'.
+        ENDIF.
+      ENDIF.
+  ENDCASE.
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  GET_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM get_data .
+  CASE 'X'.
+    WHEN p_scar.
+      PERFORM get_sc_sb_data.
+    WHEN p_spfl.
+      PERFORM get_sp_sf_data.
+  ENDCASE.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  GET_SC_SB_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM get_sc_sb_data .
+  CLEAR : gt_scarr, gs_scarr.
+  SELECT *
+    INTO CORRESPONDING FIELDS OF TABLE gt_scarr
+    FROM scarr
+    WHERE carrid  EQ p_carrid
+    AND   currcode  IN s_curr.
+
+  IF sy-subrc NE 0.
+    MESSAGE s037(k5) DISPLAY LIKE 'E'.
+    STOP.
+  ENDIF.
+
+  SORT gt_scarr BY carrid.
+  DELETE ADJACENT DUPLICATES FROM gt_scarr COMPARING carrid.
+
+  CLEAR : gt_sbook, gs_sbook.
+
+  SELECT *
+    INTO CORRESPONDING FIELDS OF TABLE gt_sbook
+    FROM sbook FOR ALL ENTRIES IN gt_scarr
+    WHERE carrid EQ gt_scarr-carrid.
+
+  CLEAR : gs_air1, gt_air1.
+  LOOP AT gt_scarr INTO gs_scarr.
+    LOOP AT gt_sbook INTO gs_sbook WHERE carrid EQ gs_scarr-carrid.
+      gs_air1-carrid     = gs_scarr-carrid.
+      gs_air1-carrname   = gs_scarr-carrname.
+      gs_air1-connid     = gs_sbook-connid.
+      gs_air1-fldate     = gs_sbook-fldate.
+      gs_air1-url        = gs_scarr-url.
+      APPEND gs_air1 TO gt_air1.
+      CLEAR  gs_air1.
+    ENDLOOP.
+  ENDLOOP.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  GET_SP_SF_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM get_sp_sf_data .
+  CLEAR : gt_spfli, gs_spfli.
+  SELECT *
+    INTO CORRESPONDING FIELDS OF TABLE gt_spfli
+    FROM spfli
+    WHERE carrid  EQ p_carrid
+    AND   cityfrom  IN s_city.
+
+  IF sy-subrc NE 0.
+    MESSAGE s037(k5) DISPLAY LIKE 'E'.
+    STOP.
+  ENDIF.
+
+  SORT gt_spfli BY carrid connid.
+  DELETE ADJACENT DUPLICATES FROM gt_spfli COMPARING carrid connid.
+
+  CLEAR : gt_sflight, gs_sflight.
+
+  SELECT *
+    INTO CORRESPONDING FIELDS OF TABLE gt_sflight
+    FROM sflight FOR ALL ENTRIES IN gt_spfli
+    WHERE carrid EQ gt_spfli-carrid
+    AND   connid EQ gt_spfli-connid.
+
+  CLEAR : gs_air2, gt_air2.
+  LOOP AT gt_spfli INTO gs_spfli.
+    LOOP AT gt_sflight INTO gs_sflight WHERE carrid EQ gs_spfli-carrid
+                                       AND   connid EQ gs_spfli-connid.
+      gs_air2-carrid     = gs_spfli-carrid.
+      gs_air2-connid     = gs_spfli-connid.
+      gs_air2-cityfrom   = gs_spfli-cityfrom.
+      gs_air2-fldate     = gs_sflight-fldate.
+      gs_air2-planetype  = gs_sflight-planetype.
+      APPEND gs_air2 TO gt_air2.
+      CLEAR  gs_air2.
+    ENDLOOP.
+  ENDLOOP.
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  EXIT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM exit .
+  CASE gv_okcode.
+    WHEN 'BACK'.
+      CALL METHOD : go_alv_grid->free,
+                    go_container->free.
+      FREE : go_alv_grid, go_container.
+
+      LEAVE TO SCREEN 0.
+  ENDCASE.
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  INIT_SCREEN
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM init_screen .
+  PERFORM set_layout.
+
+  IF go_container IS INITIAL.
+    PERFORM create_obj.
+
+    CASE 'X'.
+      WHEN p_scar.
+        CALL METHOD go_alv_grid->set_table_for_first_display
+          EXPORTING
+            i_structure_name = 'ZSBIG20_04'
+            i_save           = 'A'
+            i_default        = 'X'
+            is_layout        = gs_layout
+          CHANGING
+            it_outtab        = gt_air1.
+      WHEN p_spfl.
+        CALL METHOD go_alv_grid->set_table_for_first_display
+          EXPORTING
+            i_structure_name = 'ZSBIG20_05'
+            i_save           = 'A'
+            i_default        = 'X'
+            is_layout        = gs_layout
+          CHANGING
+            it_outtab        = gt_air2.
+    ENDCASE.
+  ELSE.
+    CALL METHOD go_alv_grid->refresh_table_display.
+  ENDIF.
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SET_LAYOUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM set_layout .
+  gs_layout-zebra       = 'X'.
+  gs_layout-sel_mode    = 'D'.
+  gs_layout-cwidth_opt  = 'X'.
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  CREATE_OBJ
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM create_obj .
+
+  CREATE OBJECT go_container
+    EXPORTING
+      repid = sy-repid
+      dynnr = sy-dynnr
+      side  = go_container->dock_at_left
+     extension                   = 3000.
+
+  CREATE OBJECT go_alv_grid
+    EXPORTING
+      i_parent = go_container.
+ENDFORM.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

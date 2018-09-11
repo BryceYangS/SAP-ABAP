@@ -1,0 +1,39 @@
+*&---------------------------------------------------------------------*
+*& Report  ZRBIG20_16
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+INCLUDE zrbig20_16top                           .    " global Data
+INCLUDE zrbig20_16s01.
+INCLUDE zrbig20_16c01.
+INCLUDE zrbig20_16o01                           .  " PBO-Modules
+INCLUDE zrbig20_16i01                           .  " PAI-Modules
+INCLUDE zrbig20_16f01                           .  " FORM-Routines
+
+INITIALIZATION.
+  PERFORM set_init_value.
+
+START-OF-SELECTION.
+  PERFORM get_data.
+
+  IF gt_data IS NOT INITIAL.
+    CALL SCREEN 100.
+  ENDIF.
+
+*GUI Texts
+*----------------------------------------------------------
+* TITLE100 --> Airline master
+
+
+*Messages
+*----------------------------------------------------------
+*
+* Message class: K5
+*001   & & & &
+*037   데이타가 없습니다.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

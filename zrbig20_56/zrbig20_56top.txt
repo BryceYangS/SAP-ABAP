@@ -1,0 +1,57 @@
+*&---------------------------------------------------------------------*
+*& Include ZRBIG20_56TOP                                     Report ZRBIG20_56
+*&
+*&---------------------------------------------------------------------*
+REPORT zrbig20_56 MESSAGE-ID k5.
+
+**********************************************************************
+* CONTROLS
+**********************************************************************
+CONTROLS go_tabstrip  TYPE TABSTRIP.
+
+**********************************************************************
+* Class instance
+**********************************************************************
+DATA : go_spfli_grid  TYPE REF TO cl_gui_alv_grid,
+       go_spfli_cont  TYPE REF TO cl_gui_custom_container,
+          " docking으로 하면 data 출력 결과 안나옴
+
+       go_sflight_grid  TYPE REF TO cl_gui_alv_grid,
+       go_sflight_cont  TYPE REF TO cl_gui_custom_container,
+
+       go_sbook_grid  TYPE REF TO cl_gui_alv_grid,
+       go_sbook_cont  TYPE REF TO cl_gui_custom_container,
+
+**********************************************************************
+* Internal table and Work area
+**********************************************************************
+       gs_spfli   TYPE spfli,
+       gs_scarr   TYPE scarr,
+       gs_sflight TYPE sflight,
+       gs_sbook   TYPE sbook,
+
+       gt_spfli   LIKE TABLE OF gs_spfli,
+       gt_sflight LIKE TABLE OF gs_sflight,
+       gt_sbook   LIKE TABLE OF gs_sbook,
+
+       BEGIN OF gs_body,
+          d1(7),
+       END OF gs_body,
+
+       gt_body LIKE TABLE OF gs_body,
+
+**********************************************************************
+* Layout & Sort & Field catalog
+**********************************************************************
+       gs_layo        TYPE lvc_s_layo,
+       gs_spfli_fcat  TYPE lvc_s_fcat,
+       gt_spfli_fcat  TYPE lvc_t_fcat,
+
+**********************************************************************
+* Common variable
+**********************************************************************
+       gv_subscreen   TYPE sy-dynnr VALUE '0101',  "처음에 뜨는 화면을 위해서 초기값 설정
+       gv_activetab   TYPE sy-ucomm VALUE 'TAB1'.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

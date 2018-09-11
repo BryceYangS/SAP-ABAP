@@ -1,0 +1,57 @@
+*&---------------------------------------------------------------------*
+*& Include ZRBIG20_59TOP                                     Report ZRBIG20_59
+*&
+*&---------------------------------------------------------------------*
+REPORT zrbig20_59 MESSAGE-ID k5.
+
+
+**********************************************************************
+* Internal table and Work area
+**********************************************************************
+DATA :  BEGIN OF gs_afko.
+    INCLUDE TYPE afko.
+DATA : txt   TYPE tca02-txt,
+       maktx TYPE makt-maktx,
+       END OF gs_afko.
+
+DATA : BEGIN OF gs_afpo.
+    INCLUDE TYPE afpo.
+DATA : name1 TYPE t001w-name1,
+       END OF gs_afpo,
+
+       gs_tca02     TYPE tca02,
+       gs_makt      TYPE makt,
+       gs_t001w     TYPE t001w,
+
+       gt_afko      LIKE TABLE OF gs_afko,
+       gt_afpo      LIKE TABLE OF gs_afpo,
+       gt_tca02     LIKE TABLE OF gs_tca02,
+       gt_makt      LIKE TABLE OF gs_makt,
+       gt_t001w     LIKE TABLE OF gs_t001w,
+
+**********************************************************************
+* Class instance
+**********************************************************************
+       go_container TYPE REF TO cl_gui_docking_container,
+       go_alv_grid  TYPE REF TO cl_gui_alv_grid,
+
+       go_pop_con   TYPE REF TO cl_gui_custom_container,
+       go_pop_grid  TYPE REF TO cl_gui_alv_grid,
+
+**********************************************************************
+* Layout & Sort & Field catalog
+**********************************************************************
+       gs_layo      TYPE lvc_s_layo,
+       gs_fcat      TYPE lvc_s_fcat,
+       gt_fcat      TYPE lvc_t_fcat,
+       gs_pop_layo  TYPE lvc_s_layo,
+       gs_pop_fcat  TYPE lvc_s_fcat,
+       gt_pop_fcat  TYPE lvc_t_fcat,
+
+**********************************************************************
+* Common variable
+**********************************************************************
+       gv_okcode    TYPE sy-ucomm.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

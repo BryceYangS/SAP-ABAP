@@ -1,0 +1,454 @@
+*&---------------------------------------------------------------------*
+*&  Include           ZRBIG20_26F01
+*&---------------------------------------------------------------------*
+*&---------------------------------------------------------------------*
+*&      Form  SET_INIT_VALUE
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM set_init_value .
+
+  p_bukrs = '1000'.
+  p_gjahr = sy-datum(4).
+
+  s_budat-sign      = 'I'.
+  s_budat-option    = 'BT'.
+  s_budat-low       = '20180101'.
+  s_budat-high      = '20180331'.
+  APPEND s_budat.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  GET_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM get_data .
+
+  DATA : lt_bsis  LIKE TABLE OF gs_bsis.
+
+  CLEAR : gt_bsis, gs_bsis.
+
+  SELECT *
+    INTO CORRESPONDING FIELDS OF TABLE gt_bsis
+    FROM bsis
+    WHERE bukrs EQ p_bukrs
+    AND   gjahr EQ p_gjahr
+    AND   budat IN s_budat.
+
+  "1. 비어있는지 확인.
+  IF gt_bsis IS NOT INITIAL.
+
+    CLEAR lt_bsis.
+
+    lt_bsis = gt_bsis.
+
+    "2. 정렬
+    SORT lt_bsis BY gsber ASCENDING.
+    "3. 중복값 제거
+    DELETE ADJACENT DUPLICATES FROM lt_bsis COMPARING gsber.
+
+    CLEAR : gs_tgsbt, gt_tgsbt.
+
+    SELECT *
+      INTO CORRESPONDING FIELDS OF TABLE gt_tgsbt
+      FROM tgsbt
+      FOR ALL ENTRIES IN lt_bsis
+      WHERE gsber EQ lt_bsis-gsber
+      AND   spras EQ sy-langu.
+    " Text table 에 찾아가서 Language key 를 찾아 본다.
+  ENDIF.
+
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  ADD_TEXT_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM add_text_data .
+
+  DATA : lv_tabix TYPE sy-tabix.
+
+  "검색할 key를 기준으로 정렬
+  SORT gt_tgsbt BY gsber ASCENDING.
+
+  LOOP AT gt_bsis INTO gs_bsis.
+
+    lv_tabix = sy-tabix.
+
+    CLEAR : gs_tgsbt.
+    READ TABLE gt_tgsbt INTO gs_tgsbt WITH KEY gsber = gs_bsis-gsber
+                                      BINARY SEARCH.
+    "Work area 를 Clear 해줬기 때문에 IF sy-subrc EQ 0. 조건이 필요 없음
+    gs_bsis-text  = gs_tgsbt-gtext.
+
+    MODIFY gt_bsis FROM gs_bsis INDEX lv_tabix TRANSPORTING text.
+
+  ENDLOOP.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  EXIT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM exit .
+  CASE gv_okcode.
+    WHEN 'BACK' OR 'CANC' OR 'EXIT'.
+      CALL METHOD : go_alv_grid->free,
+                    go_container->free.
+      FREE: go_alv_grid, go_container.
+
+      LEAVE TO SCREEN 0.
+
+  ENDCASE.
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  DISPLAY_SCREEN
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM display_screen .
+
+  PERFORM set_layout.
+*-- Set sort
+  PERFORM set_sort.
+
+  CLEAR : gs_fcat, gt_fcat.
+  PERFORM set_field_catalog USING :
+        "pk  "fieldname   "col text     "emphasize
+        'X'  'GJAHR'      'Fiscal year'      ' ',
+        'X'  'BELNR'      'Document no'      ' ',
+        ' '  'BUDAT'      'Posting date'     ' ',
+        ' '  'BLART'      'Document type'    ' ',
+        ' '  'GSBER'      'Biz area'         ' ',
+        ' '  'TEXT'       'Biz name'         'X',
+        ' '  'DMBTR'      'DMTR'             ' ',
+        ' '  'WAERS'      'Cureency'         ' '.
+
+
+  IF go_container IS INITIAL.
+    PERFORM create_obj.
+
+    SET HANDLER : go_handler->on_double_click FOR go_alv_grid,
+                  lcl_event_handler=>on_hotspot FOR go_alv_grid.
+
+    CALL METHOD go_alv_grid->set_table_for_first_display
+      EXPORTING
+        i_save                        = 'A'
+        i_default                     = 'X'
+        is_layout                     = gs_layout
+      CHANGING
+        it_outtab                     = gt_bsis
+        it_fieldcatalog               = gt_fcat
+        it_sort                       = gt_sort
+      EXCEPTIONS
+        invalid_parameter_combination = 1
+        program_error                 = 2
+        too_many_lines                = 3
+        OTHERS                        = 4.
+
+  ELSE.
+    CALL METHOD go_alv_grid->refresh_table_display.
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SET_LAYOUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM set_layout .
+
+  gs_layout-zebra       = 'X'.
+  gs_layout-sel_mode    = 'D'.
+  gs_layout-cwidth_opt  = 'X'.
+  gs_layout-totals_bef  = 'X'.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SET_FIELD_CATALOG
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_0182   text
+*      -->P_0183   text
+*      -->P_0184   text
+*      -->P_0185   text
+*----------------------------------------------------------------------*
+FORM set_field_catalog  USING  pv_key pv_fname pv_text pv_emphasize.
+  "pk  "fieldname   "col text     "emphasize
+
+  gs_fcat-key       = pv_key.
+  gs_fcat-fieldname = pv_fname.
+  gs_fcat-coltext   = pv_text.
+  gs_fcat-emphasize = pv_emphasize.
+
+  CASE pv_fname.
+    WHEN 'BELNR'.
+      gs_fcat-just  = 'R'.
+      gs_fcat-hotspot = 'X'.
+    WHEN 'DMBTR'.
+      gs_fcat-cfieldname  = 'WAERS'.
+      gs_fcat-do_sum      = 'X'.
+  ENDCASE.
+
+  APPEND gs_fcat TO gt_fcat.
+  CLEAR gs_fcat.
+
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  CREATE_OBJ
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM create_obj .
+
+*-- Global class for display
+  CREATE OBJECT go_container
+    EXPORTING
+      repid     = sy-repid
+      dynnr     = sy-dynnr
+      side      = go_container->dock_at_left
+      extension = 3000.
+
+  CREATE OBJECT go_alv_grid
+    EXPORTING
+      i_parent = go_container.
+
+*-- Local class for event
+  CREATE OBJECT go_handler.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SET_SORT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM set_sort .
+
+  CLEAR : gs_sort, gt_sort.
+  gs_sort-fieldname  = 'BLART'.
+  gs_sort-spos       = 1.
+  gs_sort-up         = 'X'.    " 오름차순
+  gs_sort-subtot     = 'X'.
+  APPEND gs_sort TO gt_sort.
+  CLEAR  gs_sort.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  ON_DOUBLE_CLICK
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_E_ROW  text
+*      -->P_E_COLUMN  text
+*----------------------------------------------------------------------*
+FORM on_double_click  USING pv_row pv_column.
+
+  DATA : lv_htype TYPE dd01v-datatype,
+         lv_subrc TYPE sy-subrc.
+
+  CALL FUNCTION 'NUMERIC_CHECK'
+    EXPORTING
+      string_in = pv_row
+    IMPORTING
+      htype     = lv_htype.
+
+  IF lv_htype EQ 'CHAR'.
+    EXIT.
+  ENDIF.
+
+*-- Popup for documnet detail
+  CLEAR : gt_bseg.
+
+  CLEAR : gs_bsis.
+  READ TABLE gt_bsis INTO gs_bsis INDEX pv_row.
+
+  CALL FUNCTION 'ZFM_DOC_DETAIL_20_01'
+    EXPORTING
+      i_bukrs = p_bukrs
+      i_gjahr = gs_bsis-gjahr
+      i_belnr = gs_bsis-belnr
+    IMPORTING
+      e_subrc = lv_subrc
+    TABLES
+      t_bseg  = gt_bseg.
+
+  IF sy-subrc EQ 0.
+    CALL SCREEN 110 STARTING AT 03 03.
+    "popup screen은 10번씩.
+    "Starting AT 을 쓰면 popup으로 뜬다.
+    "STARTING AT  X좌표 Y좌표. 시작위치를 정해주고 거기서부터 그려줌.
+    "대략 03 03 || 05 05 를 쓴다.
+
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  ON_HOTSPOT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_E_ROW_ID  text
+*      -->P_E_COLUMN_ID  text
+*----------------------------------------------------------------------*
+FORM on_hotspot  USING pv_row_id pv_column_id.
+
+  DATA : lv_htype TYPE dd01v-datatype.
+
+  CALL FUNCTION 'NUMERIC_CHECK'
+    EXPORTING
+      string_in = pv_row_id
+    IMPORTING
+      htype     = lv_htype.
+
+  IF lv_htype EQ 'CHAR'.
+    EXIT.
+  ENDIF.
+
+  CLEAR gs_bsis.
+  READ TABLE gt_bsis INTO gs_bsis INDEX pv_row_id.
+
+  SET PARAMETER ID 'BLN' FIELD gs_bsis-belnr.
+  SET PARAMETER ID 'BUK' FIELD p_bukrs.
+  SET PARAMETER ID 'GJR' FIELD gs_bsis-gjahr.
+
+  CALL TRANSACTION 'FB03' AND SKIP FIRST SCREEN.
+  " SKIP FIRST SCREEN 을 쓰지 않으면 FB03에 입력만 하고 멈춰있음.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  DISPLAY_POPUP
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM display_popup .
+  PERFORM set_pop_layout.
+
+  CLEAR : gt_pop_fcat, gs_pop_fcat.
+  PERFORM set_pop_fcat USING :
+        "pk     "fieldName      "Col text       "emphasize.
+        'X'       'BELNR'       'Document Num'          '  ',
+        'X'       'BUZEI'       'Number of Line Item'   '  ',
+        ' '       'BSCHL'       'Posting key'           '  ',
+        ' '       'DMBTR'       'Amount'                '  '.
+
+
+  IF go_pop_container IS INITIAL.
+    PERFORM create_pop_obj.
+
+    CALL METHOD go_pop_grid->set_table_for_first_display
+      EXPORTING
+        i_save                        = 'A'
+        i_default                     = 'X'
+        is_layout                     = gs_pop_layo
+      CHANGING
+        it_outtab                     = gt_bseg
+        it_fieldcatalog               = gt_pop_fcat
+      EXCEPTIONS
+        invalid_parameter_combination = 1
+        program_error                 = 2
+        too_many_lines                = 3
+        OTHERS                        = 4.
+
+  ELSE.
+    CALL METHOD go_pop_grid->refresh_table_display.
+  ENDIF.
+
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SET_POP_LAYOUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM set_pop_layout .
+
+  CLEAR : gs_pop_layo.
+  gs_pop_layo-zebra     = 'X'.
+  gs_pop_layo-sel_mode  = 'D'.
+  gs_pop_layo-cwidth_opt  = 'X'.
+  gs_pop_layo-no_toolbar  = 'X'.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SET_POP_FCAT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_0517   text
+*      -->P_0518   text
+*      -->P_0519   text
+*      -->P_0520   text
+*----------------------------------------------------------------------*
+FORM set_pop_fcat  USING   pv_key pv_fname pv_text pv_empha.
+
+  gs_pop_fcat-key         = pv_key.
+  gs_pop_fcat-fieldname   = pv_fname.
+  gs_pop_fcat-coltext     = pv_text.
+  gs_pop_fcat-emphasize   = pv_empha.
+
+  CASE pv_fname.
+    WHEN 'DMBTR'.
+      gs_pop_fcat-do_sum  = 'X'.
+  ENDCASE.
+
+  APPEND gs_pop_fcat TO gt_pop_fcat.
+  CLEAR  gs_pop_fcat.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  CREATE_POP_OBJ
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM create_pop_obj .
+
+  CREATE OBJECT go_pop_container
+    EXPORTING
+      container_name = 'GO_CONT'.
+
+  CREATE OBJECT go_pop_grid
+    EXPORTING
+      i_parent = go_pop_container.
+
+ENDFORM.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

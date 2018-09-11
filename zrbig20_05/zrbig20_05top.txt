@@ -1,0 +1,14 @@
+*&---------------------------------------------------------------------*
+*& Include ZRBIG20_05TOP                                     Report ZRBIG20_05
+*&
+*&---------------------------------------------------------------------*
+REPORT ZRBIG20_05 MESSAGE-ID K5 LINE-SIZE 500.
+
+TABLES : scarr, spfli.
+
+DATA :
+      gt_spfli TYPE TABLE OF spfli,
+      gs_spfli TYPE          spfli.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

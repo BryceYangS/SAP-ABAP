@@ -1,0 +1,348 @@
+*&---------------------------------------------------------------------*
+*&  Include           ZRBIG20_48F01
+*&---------------------------------------------------------------------*
+*&---------------------------------------------------------------------*
+*&      Form  SET_INIT_VALUE
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM set_init_value .
+  p_mjahr = sy-datum(4).
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  GET_BODY_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM get_body_data .
+
+  CLEAR : gt_body.
+  SELECT *
+    INTO CORRESPONDING FIELDS OF TABLE gt_body
+    FROM mkpf
+    WHERE mjahr EQ p_mjahr.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  DISPLAY_100_SCREEN
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM display_100_screen .
+
+  PERFORM set_layo.
+
+  CLEAR : gs_fcat, gt_fcat.
+  PERFORM set_field_catalog USING :
+        "pk "FieldName      "Col text         "empha
+        'X'   'MJAHR'       'Document year'   ' ',
+        'X'   'MBLNR'       'Material doc'    ' ',
+        ' '   'AWSYS'       'Logical System'  ' ',
+        ' '   'VGART'       'Event type'      ' ',
+        ' '   'XBLNR'       'Reference Doc'   ' '.
+
+  IF go_container IS INITIAL.
+
+    PERFORM create_obj.
+
+    SET HANDLER : lcl_event_handler=>hotspot_click FOR go_alv_grid,
+                  lcl_event_handler=>double_click  FOR go_alv_grid.
+
+    CALL METHOD go_alv_grid->set_table_for_first_display
+      EXPORTING
+        i_save                        = 'A'
+        i_default                     = 'X'
+        is_layout                     = gs_layo
+      CHANGING
+        it_outtab                     = gt_body
+        it_fieldcatalog               = gt_fcat
+*       it_sort                       =
+      EXCEPTIONS
+        invalid_parameter_combination = 1
+        program_error                 = 2
+        too_many_lines                = 3
+        OTHERS                        = 4.
+
+  ELSE.
+
+    CALL METHOD go_alv_grid->refresh_table_display.
+
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SET_LAYO
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM set_layo .
+  CLEAR : gs_layo.
+  gs_layo-zebra       = 'X'.
+  gs_layo-sel_mode    = 'D'.
+  gs_layo-cwidth_opt  = 'X'.
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SET_FIELD_CATALOG
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_0037   text
+*      -->P_0038   text
+*      -->P_0039   text
+*      -->P_0040   text
+*----------------------------------------------------------------------*
+FORM set_field_catalog  USING  pv_key pv_fname pv_text pv_empha.
+
+  gs_fcat-key        = pv_key.
+  gs_fcat-fieldname  = pv_fname.
+  gs_fcat-coltext    = pv_text.
+  gs_fcat-emphasize  = pv_empha.
+
+  CASE pv_fname.
+    WHEN 'MBLNR'.
+      gs_fcat-hotspot = 'X'.
+  ENDCASE.
+
+  APPEND gs_fcat TO gt_fcat.
+  CLEAR  gs_fcat.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  CREATE_OBJ
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM create_obj .
+
+  CREATE OBJECT go_container
+    EXPORTING
+      repid     = sy-repid
+      dynnr     = sy-dynnr
+      side      = go_container->dock_at_left
+      extension = 3000.
+
+  CREATE OBJECT go_alv_grid
+    EXPORTING
+      i_parent = go_container.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  HOTSPOT_CLICK
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_E_ROW_ID  text
+*----------------------------------------------------------------------*
+FORM hotspot_click  USING    pv_row_id.
+
+  CLEAR : gs_body.
+  READ TABLE gt_body INTO gs_body INDEX pv_row_id.
+
+  SET PARAMETER ID : 'MBN' FIELD gs_body-mblnr,
+                     'MJA' FIELD gs_body-mjahr.
+
+  CALL TRANSACTION 'MB03' AND SKIP FIRST SCREEN.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  DOUBLE_CLICK
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_E_ROW  text
+*----------------------------------------------------------------------*
+FORM double_click  USING    pv_row.
+
+  DATA : lv_subrc TYPE sy-subrc.
+
+  CLEAR : gs_body.
+  READ TABLE gt_body INTO gs_body INDEX pv_row.
+
+  CLEAR : gt_mseg, gt_t001w, gt_makt.
+  CALL FUNCTION 'ZFM_DOC_DETAIL_20_03'
+    EXPORTING
+      i_mblnr = gs_body-mblnr
+      i_mjahr = gs_body-mjahr
+    IMPORTING
+      e_subrc = lv_subrc
+    TABLES
+      t_mseg  = gt_mseg
+      t_t001w = gt_t001w
+      t_makt  = gt_makt.
+
+  IF lv_subrc EQ 0.
+    PERFORM make_display_data.
+    CALL SCREEN 110 STARTING AT 03 03.
+
+  ELSE.
+    MESSAGE s037 DISPLAY LIKE 'E'.
+    STOP.
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  MAKE_DISPLAY_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM make_display_data .
+
+  SORT : gt_t001w BY werks ASCENDING,
+         gt_makt  BY matnr ASCENDING.
+
+  CLEAR : gt_pop_boby, gs_mseg.
+  LOOP AT gt_mseg INTO gs_mseg.
+
+    CLEAR : gs_pop_body.
+    MOVE-CORRESPONDING gs_mseg TO gs_pop_body.
+
+    CLEAR : gs_t001w.
+    READ TABLE gt_t001w INTO gs_t001w WITH KEY werks = gs_pop_body-werks
+              BINARY SEARCH.
+    IF sy-subrc EQ 0.
+      gs_pop_body-name1 = gs_t001w-name1.
+    ENDIF.
+
+    CLEAR : gs_makt.
+    READ TABLE gt_makt INTO gs_makt WITH KEY matnr = gs_pop_body-matnr
+              BINARY SEARCH.
+    IF sy-subrc EQ 0.
+      gs_pop_body-maktx = gs_makt-maktx.
+    ENDIF.
+
+    APPEND gs_pop_body TO gt_pop_boby.
+
+  ENDLOOP.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  DISPLAY_110_SCREEN
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM display_110_screen .
+
+  PERFORM set_pop_layo.
+
+  CLEAR : gs_pop_fcat, gt_pop_fcat.
+  PERFORM set_pop_fcat USING :
+        "pk "FieldName     "Coltext           "empha
+        'X'    'MBLNR'     'MBLNR'            ' ',
+        ' '    'MATNR'     'MATNR'            ' ',
+        ' '    'MAKTX'     'MAKTX'            'X',
+        ' '    'WERKS'     'WERKS'            ' ',
+        ' '    'NAME1'     'NAME1'            'X',
+        ' '    'DMBTR'     'DMBTR'            ' ',
+        ' '    'WAERS'     'WAERS'            ' '.
+
+  IF go_pop_con IS INITIAL.
+
+    PERFORM create_pop_obj.
+
+    CALL METHOD go_pop_grid->set_table_for_first_display
+      EXPORTING
+        i_save                        = 'A'
+        i_default                     = 'X'
+        is_layout                     = gs_pop_layo
+      CHANGING
+        it_outtab                     = gt_pop_boby
+        it_fieldcatalog               = gt_pop_fcat
+*       it_sort                       =
+      EXCEPTIONS
+        invalid_parameter_combination = 1
+        program_error                 = 2
+        too_many_lines                = 3
+        OTHERS                        = 4.
+
+  ELSE.
+    CALL METHOD go_pop_grid->refresh_table_display.
+  ENDIF.
+
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SET_POP_LAYO
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM set_pop_layo .
+
+  CLEAR : gs_pop_layo.
+  gs_pop_layo-zebra       = 'X'.
+  gs_pop_layo-sel_mode    = 'D'.
+  gs_pop_layo-cwidth_opt  = 'X'.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SET_POP_FCAT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_0388   text
+*      -->P_0389   text
+*      -->P_0390   text
+*      -->P_0391   text
+*----------------------------------------------------------------------*
+FORM set_pop_fcat  USING pv_key pv_fname pv_text pv_empha.
+
+  gs_pop_fcat-key        = pv_key.
+  gs_pop_fcat-fieldname  = pv_fname.
+  gs_pop_fcat-coltext    = pv_text.
+  gs_pop_fcat-emphasize  = pv_empha.
+
+  CASE pv_fname.
+    WHEN 'DMBTR'.
+      gs_pop_fcat-cfieldname  = 'WAERS'.
+      gs_pop_fcat-do_sum      = 'X'.
+  ENDCASE.
+
+  APPEND gs_pop_fcat TO gt_pop_fcat.
+  CLEAR  gs_pop_fcat.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  CREATE_POP_OBJ
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM create_pop_obj .
+
+  CREATE OBJECT go_pop_con
+    EXPORTING
+      container_name = 'GO_CONT'.
+
+  CREATE OBJECT go_pop_grid
+    EXPORTING
+      i_parent = go_pop_con.
+
+ENDFORM.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

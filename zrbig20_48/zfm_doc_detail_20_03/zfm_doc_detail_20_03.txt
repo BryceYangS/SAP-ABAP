@@ -1,0 +1,21 @@
+FUNCTION ZFM_DOC_DETAIL_20_03.
+*"----------------------------------------------------------------------
+*"*"Local Interface:
+*"  IMPORTING
+*"     REFERENCE(I_MBLNR) TYPE  MBLNR
+*"     REFERENCE(I_MJAHR) TYPE  MJAHR
+*"  EXPORTING
+*"     REFERENCE(E_SUBRC) TYPE  SY-SUBRC
+*"  TABLES
+*"      T_MSEG STRUCTURE  MSEG
+*"      T_T001W STRUCTURE  T001W OPTIONAL
+*"      T_MAKT STRUCTURE  MAKT OPTIONAL
+*"----------------------------------------------------------------------
+
+PERFORM get_mseg_data TABLES t_mseg t_t001w t_makt
+                      USING i_mblnr i_mjahr e_subrc.
+
+ENDFUNCTION.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

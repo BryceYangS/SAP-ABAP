@@ -1,0 +1,52 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>ZRBIG20_14TOP</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"><b>Code listing for: ZRBIG20_14TOP</b></font>
+<hr>
+<pre width="100">
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Include ZRBIG20_14TOP                                     Report ZRBIG20_14</font>
+<font color ="#0000FF">*&</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+REPORT zrbig20_14 LINE-SIZE 500.
+
+<font color ="#0000FF">**********************************************************************</font>
+<font color ="#0000FF">* TABLES</font>
+<font color ="#0000FF">**********************************************************************</font>
+TABLES : scarr.
+
+<font color ="#0000FF">**********************************************************************</font>
+<font color ="#0000FF">* Class instance</font>
+<font color ="#0000FF">**********************************************************************</font>
+DATA : go_alv_grid  TYPE REF TO cl_gui_alv_grid,    "global object 줄임말
+<font color ="#0000FF">*       go_container TYPE REF TO cl_gui_custom_container.</font>
+       go_container TYPE REF TO cl_gui_docking_container.
+        "
+
+<font color ="#0000FF">**********************************************************************</font>
+<font color ="#0000FF">* Internal table and Work area</font>
+<font color ="#0000FF">**********************************************************************</font>
+DATA : gt_scarr   TYPE TABLE OF scarr,
+       gs_scarr   TYPE          scarr.
+
+DATA : gs_layout  TYPE lvc_s_layo.
+      "standard를 참조하겠습니다.
+      "lvc_s_ : s는 structure를 의미한다.
+      "ALV 간격을 최적화 시켜주기 위해 필요한 Work area 선언.
+  "ALV에는 반경을 자동으로 최적화 시켜주는 optmizer가 있다.
+    " Layout은 workarea만 있으면 된다.
+
+<font color ="#0000FF">**********************************************************************</font>
+<font color ="#0000FF">* Common variable</font>
+<font color ="#0000FF">**********************************************************************</font>
+  "OK_code 값을 받아줄 변수를 선언해주어야 한다.
+DATA : gv_okcode  TYPE sy-ucomm.
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750
+</font>
+</body>
+</html>

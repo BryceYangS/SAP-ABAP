@@ -1,0 +1,222 @@
+*&---------------------------------------------------------------------*
+*&  Include           ZRBIG20_24F01
+*&---------------------------------------------------------------------*
+*&---------------------------------------------------------------------*
+*&      Form  SET_INIT_VALUE
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM set_init_value .
+
+  p_carrid  = 'LH'.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  GET_CONNECTION_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM get_connection_data .
+
+  CLEAR : gs_spfli, gs_spfli.
+
+  SELECT *
+    INTO CORRESPONDING FIELDS OF TABLE gt_spfli
+    FROM spfli
+    WHERE carrid  EQ p_carrid
+    AND   connid  IN s_connid.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SET_ICON_COLOR
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM set_icon_color .
+
+  DATA lv_tabix TYPE sy-tabix.
+  "데이터로 꽉 차있는 itab을 다루려고 할 때 가장 먼저 tabix에 대한 변수 선언을 가장 먼저 해주자!
+
+**-- Country from 'US' = Line color Green (C510) , Icon = ICON_WS_SHIP
+*  LOOP AT gt_spfli INTO gs_spfli.
+*
+*    lv_tabix = sy-tabix.
+*
+*    IF gs_spfli-countryfr EQ 'US'.
+*
+*      gs_spfli-icon   = icon_ws_ship.
+*      gs_spfli-col    = 'C510'.
+*
+*    ENDIF.
+*
+**-- Apply to internal table from work area
+*    MODIFY gt_spfli FROM gs_spfli INDEX lv_tabix
+*                                  TRANSPORTING icon col.
+*
+*  ENDLOOP.
+
+
+*-- 이런식으로 WHERE절을 통해 제어할 수 있다.
+  "이게 더 효율성이 좋음. IF문에서 굳이 제어할 필요가 없다.
+  LOOP AT gt_spfli INTO gs_spfli WHERE countryfr EQ 'US'.
+
+    lv_tabix = sy-tabix.
+
+    gs_spfli-icon = icon_ws_ship.
+    gs_spfli-col  = 'C510'.
+
+    MODIFY gt_spfli FROM gs_spfli INDEX lv_tabix
+                                  TRANSPORTING icon col.
+
+  ENDLOOP.
+
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  EXIT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM exit .
+
+  CASE gv_okcode.
+    WHEN 'BACK' OR 'EXIT' OR 'CANC'.
+
+      CALL METHOD : go_alv_grid->free,
+                    go_container->free.
+
+      FREE : go_container, go_alv_grid.
+
+      LEAVE TO SCREEN 0. " Leave to previous screen
+*      LEAVE PROGRAM.     " Program terminate. 아예 소스로 와버림. 끝냄.
+
+  ENDCASE.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  DISPLAY_SCREEN
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM display_screen .
+
+  PERFORM set_layout.
+
+*-- Set field catalog for ALV
+  PERFORM set_field_catalog USING :
+                     "pk fieldname     Header txt     emphasize
+                     'X' 'ICON'        'Icon'         ' ',
+                     'X' 'CARRID'      'Airline'      ' ',
+                     'X' 'CONNID'      'Connection'   ' ',
+                     ' ' 'CONUTRYFR'   'Departure cr' ' ',
+                     ' ' 'COUNTRYTO'   'Arrival cr'   'X'.
+
+
+  IF go_container IS INITIAL.
+
+    PERFORM create_obj.
+
+    CALL METHOD go_alv_grid->set_table_for_first_display
+      EXPORTING
+        i_save                        = 'A'
+        i_default                     = 'X'
+        is_layout                     = gs_layout
+      CHANGING
+        it_outtab                     = gt_spfli
+        it_fieldcatalog               = gt_fcat
+      EXCEPTIONS
+        invalid_parameter_combination = 1
+        program_error                 = 2
+        too_many_lines                = 3
+        OTHERS                        = 4.
+
+  ELSE.
+    CALL METHOD go_alv_grid->refresh_table_display.
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SET_LAYOUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM set_layout .
+
+  gs_layout-zebra       = 'X'.    " Line separator by color
+  gs_layout-sel_mode    = 'D'.    " Row Multi selection mode
+  gs_layout-cwidth_opt  = 'X'.    " Column optimizer
+
+*--For line color
+  gs_layout-info_fname  = 'COL'.  "
+  "color 코드를 담고있는 필드를 알려준다.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SET_FIELD_CATALOG
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_0100   text
+*      -->P_0101   text
+*      -->P_0102   text
+*      -->P_0103   text
+*----------------------------------------------------------------------*
+FORM set_field_catalog  USING  pv_key pv_field pv_text pv_emphasize.
+
+  gs_fcat-key       = pv_key.
+  gs_fcat-fieldname = pv_field.
+  gs_fcat-coltext   = pv_text.
+  gs_fcat-emphasize = pv_emphasize.
+
+  CASE pv_field.
+    WHEN 'CONNID'.
+      gs_fcat-ref_table = 'SPFLI'.
+  ENDCASE.
+
+  APPEND gs_fcat  TO gt_fcat.
+  CLEAR  gs_fcat.             "반드시 쓰레기 값은 CLEAR!!!!
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  CREATE_OBJ
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM create_obj .
+
+  CREATE OBJECT go_container
+    EXPORTING
+      repid     = sy-repid
+      dynnr     = sy-dynnr
+      side      = go_container->dock_at_left
+      extension = 3000.
+
+  CREATE OBJECT go_alv_grid
+    EXPORTING
+      i_parent = go_container.
+
+ENDFORM.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

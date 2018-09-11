@@ -1,0 +1,222 @@
+*&---------------------------------------------------------------------*
+*&  Include           ZRBIG20_16F01
+*&---------------------------------------------------------------------*
+*&---------------------------------------------------------------------*
+*&      Form  SET_INIT_VALUE
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM set_init_value .
+
+  p_carrid = 'LH'.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  GET_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM get_data .
+
+  CLEAR : gt_scarr, gs_scarr.
+  SELECT *
+    INTO CORRESPONDING FIELDS OF TABLE gt_scarr
+    FROM scarr
+    WHERE carrid EQ p_carrid.
+
+
+  IF gt_scarr IS INITIAL.
+    MESSAGE s037(k5) DISPLAY LIKE 'E'.
+    STOP.
+  ENDIF.
+
+  SORT gt_scarr BY carrid.
+
+  DELETE ADJACENT DUPLICATES FROM gt_scarr COMPARING carrid.
+
+  CLEAR : gt_spfli, gs_spfli.
+  SELECT *
+    INTO CORRESPONDING FIELDS OF TABLE gt_spfli
+    FROM spfli FOR ALL ENTRIES IN gt_scarr
+    WHERE carrid EQ gt_scarr-carrid
+    AND   connid IN s_connid.
+
+  CLEAR : gt_data, gs_data.
+  LOOP AT gt_scarr INTO gs_scarr.
+    LOOP AT gt_spfli INTO gs_spfli WHERE carrid EQ gs_scarr-carrid
+                                   AND   connid IN s_connid.
+      gs_data-carrid    = gs_scarr-carrid.
+      gs_data-connid    = gs_spfli-connid.
+      gs_data-carrname  = gs_scarr-carrname.
+      gs_data-cityfrom  = gs_spfli-cityfrom.
+      gs_data-cityto    = gs_spfli-cityto.
+      APPEND gs_data TO gt_data.
+      CLEAR gs_data.
+
+    ENDLOOP.
+  ENDLOOP.
+
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  INIT_SCREEN
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM init_screen .
+
+*--Set layout
+  PERFORM set_layout.
+*--Set Sort
+  PERFORM set_sort.
+
+  IF go_container IS INITIAL.
+    PERFORM create_object.
+
+    SET HANDLER : go_handler->double_click FOR go_alv_grid,
+                  lcl_event_handler=>hotspot_click  FOR go_alv_grid.
+
+    CLEAR : gs_fcat, gt_fcat.
+    PERFORM set_field_catalog USING :
+          "pk   "Fieldname        "Col text       "Emphasize.
+          'X'   'CARRID'          'Airline'       ' ',
+          'X'   'CONNID'          'Connection'    ' ',
+          ' '   'CARRNAME'        'Carrname'      ' ',
+          ' '   'CITYFROM'        'CityFr'        'X',
+          ' '   'CITYTO'          'CityTo'        ' '.
+
+    CALL METHOD go_alv_grid->set_table_for_first_display
+      EXPORTING
+*       i_structure_name              = 'ZSBIG20_03'
+        i_save                        = 'A'
+        i_default                     = 'X'
+        is_layout                     = gs_layout
+      CHANGING
+        it_outtab                     = gt_data
+        it_fieldcatalog               = gt_fcat
+        it_sort                       = gt_sort
+      EXCEPTIONS
+        invalid_parameter_combination = 1
+        program_error                 = 2
+        too_many_lines                = 3
+        OTHERS                        = 4.
+
+  ELSE.
+    CALL METHOD go_alv_grid->refresh_table_display.
+  ENDIF.
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SET_LAYOUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM set_layout .
+  gs_layout-zebra         = 'X'.
+  gs_layout-cwidth_opt    = 'X'.
+  gs_layout-sel_mode      = 'D'.
+  gs_layout-grid_title    = 'HaHa'.
+  gs_layout-smalltitle    = 'X'.
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  CREATE_OBJECT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM create_object .
+
+  CREATE OBJECT go_container
+    EXPORTING
+      repid     = sy-repid
+      dynnr     = sy-dynnr
+      side      = go_container->dock_at_left
+      extension = 3000.
+
+  CREATE OBJECT go_alv_grid
+    EXPORTING
+      i_parent = go_container.
+
+  CREATE OBJECT go_handler.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  DOUBLE_CLICK
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_E_ROW  text
+*      -->P_E_COLUMN  text
+*----------------------------------------------------------------------*
+FORM double_click  USING    pv_row pv_column.
+
+  MESSAGE i001(k5) WITH 'Row : ' pv_row 'Column : ' pv_column.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  HOTSPOT_CLICK
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_E_ROW_ID  text
+*      -->P_E_COLUMN_ID  text
+*----------------------------------------------------------------------*
+FORM hotspot_click  USING    pv_row_id pv_column_id.
+  MESSAGE i001(k5) WITH 'Row : ' pv_row_id 'Column : ' pv_column_id.
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SET_SORT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM set_sort .
+  CLEAR : gs_sort, gt_sort.
+
+  gs_sort-fieldname = 'CONNID'.
+  gs_sort-spos      = 1.
+  gs_sort-down      = 'X'.
+  APPEND gs_sort  TO gt_sort.
+  CLEAR  gs_sort.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SET_FIELD_CATALOG
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+FORM set_field_catalog  USING  pv_key pv_fname  pv_text pv_emphasize.
+  "pk   "Fieldname        "Col text       "Emphasize.
+
+  gs_fcat-key       = pv_key.
+  gs_fcat-fieldname = pv_fname.
+  gs_fcat-coltext   = pv_text.
+  gs_fcat-emphasize = pv_emphasize.
+
+  CASE pv_fname.
+    WHEN 'CARRNAME'.
+      gs_fcat-hotspot  = 'X'.
+  ENDCASE.
+
+  APPEND gs_fcat TO gt_fcat.
+  CLEAR  gs_fcat.
+
+ENDFORM.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

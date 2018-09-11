@@ -1,0 +1,41 @@
+*&---------------------------------------------------------------------*
+*& Report  ZRBIG20_48
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+INCLUDE zrbig20_48top                           .    " global Data
+INCLUDE zrbig20_48s01.
+INCLUDE zrbig20_48c01.
+INCLUDE zrbig20_48o01                           .  " PBO-Modules
+INCLUDE zrbig20_48i01                           .  " PAI-Modules
+INCLUDE zrbig20_48f01                           .  " FORM-Routines
+
+INITIALIZATION.
+  PERFORM set_init_value.
+
+START-OF-SELECTION.
+  PERFORM get_body_data.
+
+IF gt_body IS NOT INITIAL.
+  CALL SCREEN 100.
+ELSE.
+  MESSAGE s037 DISPLAY LIKE 'E'.
+ENDIF.
+
+*GUI Texts
+*----------------------------------------------------------
+* TITLE100 --> Material document list
+* TITLE110 --> Document detail
+
+
+*Messages
+*----------------------------------------------------------
+*
+* Message class: K5
+*037   데이타가 없습니다.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

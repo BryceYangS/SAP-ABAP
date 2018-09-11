@@ -1,0 +1,339 @@
+*&---------------------------------------------------------------------*
+*&  Include           ZRBIG20_61F01
+*&---------------------------------------------------------------------*
+*&---------------------------------------------------------------------*
+*&      Form  SET_INIT_VALUE
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM set_init_value .
+
+  p_lednr = '00'.
+  p_gjahr = sy-datum(4).
+  p_wrttp = '04'.
+  p_versn = '0'.
+  p_monat = sy-datum+4(2).
+  p_twaer = 'EUR'.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  GET_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM get_data .
+
+  DATA : lt_cosp LIKE gt_cosp.
+
+  CLEAR : gt_cosp.
+  SELECT *
+    INTO CORRESPONDING FIELDS OF TABLE gt_cosp
+    FROM cosp
+    WHERE lednr EQ p_lednr
+    AND   gjahr EQ p_gjahr
+    AND   wrttp EQ p_wrttp
+    AND   versn EQ p_versn
+    AND   twaer EQ p_twaer.
+
+  IF gt_cosp IS NOT INITIAL.
+
+    CLEAR : lt_cosp.
+    lt_cosp = gt_cosp.
+
+    SORT lt_cosp BY kstar ASCENDING.
+    DELETE ADJACENT DUPLICATES FROM lt_cosp COMPARING kstar.
+
+    CLEAR : gt_csku.
+    SELECT *
+      INTO CORRESPONDING FIELDS OF TABLE gt_csku
+      FROM csku
+      FOR ALL ENTRIES IN lt_cosp
+      WHERE kstar EQ lt_cosp-kstar
+      AND   spras EQ sy-langu
+      AND   ktopl EQ 'CAIN'.
+
+  ELSE.
+    MESSAGE s037 DISPLAY LIKE 'E'.
+    STOP.
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  MAKE_DISPLAY_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM make_display_data .
+
+  FIELD-SYMBOLS <lv_fs> TYPE any.
+
+  DATA : lv_mon(2)  TYPE n,
+         lv_sum     TYPE cosp-wtg001,
+         lv_var(20).
+
+  SORT gt_csku BY kstar ASCENDING.
+
+  CLEAR : gt_body, gs_cosp.
+  LOOP AT gt_cosp INTO gs_cosp.
+
+    CLEAR : gs_body.
+    MOVE-CORRESPONDING gs_cosp TO gs_body.
+
+    CLEAR : gs_csku.
+    READ TABLE gt_csku INTO gs_csku WITH KEY kstar = gs_body-kstar
+                                    BINARY SEARCH.
+    gs_body-ktext = gs_csku-ktext.
+
+    CLEAR : lv_sum,
+            lv_mon.
+    DO p_monat TIMES.
+      lv_mon = lv_mon + 1.
+
+      CLEAR : lv_var.
+      CONCATENATE 'gs_cosp-wtg0' lv_mon INTO lv_var.
+
+      ASSIGN (lv_var) TO <lv_fs>.
+
+      lv_sum = lv_sum + <lv_fs>.
+
+    ENDDO.
+
+    CASE gs_cosp-beknz.
+      WHEN 'S'.
+        gs_body-s_dmbtr = lv_sum.
+      WHEN 'H'.
+        gs_body-h_dmbtr = lv_sum.
+
+    ENDCASE.
+
+    COLLECT gs_body INTO gt_body.
+    CLEAR   gs_body.
+
+  ENDLOOP.
+
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SAVE_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM save_data .
+
+CALL METHOD go_alv_grid->check_changed_data
+*  IMPORTING
+*    e_valid   =
+*  CHANGING
+*    c_refresh = 'X'
+    .
+
+  IF gt_body IS INITIAL.
+
+  ENDIF.
+
+  DATA : ls_save   TYPE ztbig20_20,
+         lt_save   LIKE TABLE OF ls_save,
+         ls_check  TYPE ztbig20_20,
+         lt_check  LIKE TABLE OF ls_check,
+         lv_answer.
+
+  CALL FUNCTION 'POPUP_TO_CONFIRM'
+    EXPORTING
+      titlebar              = 'SAVE DATA'
+      text_question         = 'Save gogogo??'
+      text_button_1         = 'Ja'(001)
+*     ICON_BUTTON_1         = ' '
+      text_button_2         = 'Nein'(002)
+*     ICON_BUTTON_2         = ' '
+      display_cancel_button = 'X'
+    IMPORTING
+      answer                = lv_answer.
+
+  IF lv_answer NE '1'.
+    EXIT.
+  ENDIF.
+
+  CLEAR : lt_check.
+  SELECT *
+    INTO CORRESPONDING FIELDS OF TABLE lt_check
+    FROM ztbig20_20.
+
+
+  CLEAR : gs_body, lt_save.
+  LOOP AT gt_body INTO gs_body.
+
+    CLEAR : ls_save.
+    MOVE-CORRESPONDING gs_body TO ls_save.
+    ls_save-lednr = p_lednr.
+    ls_save-gjahr = p_gjahr.
+
+    CLEAR : ls_check.
+    READ TABLE lt_check INTO ls_check
+                        WITH KEY lednr = ls_save-lednr
+                                 gjahr = ls_save-gjahr
+                                 twaer = ls_save-twaer.
+    IF sy-subrc EQ 0.
+      ls_save-erdat = ls_check-erdat.
+      ls_save-ernam = ls_check-ernam.
+      ls_save-erzet = ls_check-erzet.
+      ls_save-aedat = sy-datum.
+      ls_save-aenam = sy-uname.
+      ls_save-aezet = sy-uzeit.
+    ELSE.
+      ls_save-erdat = sy-datum.
+      ls_save-ernam = sy-uname.
+      ls_save-erzet = sy-uzeit.
+    ENDIF.
+
+    APPEND ls_save TO lt_save.
+    CLEAR  ls_save.
+
+  ENDLOOP.
+
+  MODIFY ztbig20_20 FROM TABLE lt_save.
+
+  IF sy-subrc EQ 0.
+    COMMIT WORK.
+    MESSAGE s102.
+  ELSE.
+    ROLLBACK WORK.
+    MESSAGE s001 WITH TEXT-e01 DISPLAY LIKE 'E'.
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  DISPLAY_SCREEN_100
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM display_screen_100 .
+
+  PERFORM set_layo.
+
+  CLEAR : gs_fcat, gt_fcat.
+  PERFORM set_fcat USING :
+        "pk "FieldName    "Coltext         "emphasize
+        ' ' 'S_DMBTR'      'Debit'         ' ',
+        ' ' 'KSTAR'        'Cost Element'  ' ',
+        ' ' 'KTEXT'        'General Name'  'X',
+        ' ' 'H_DMBTR'      'Credit'        ' ',
+        ' ' 'TWAER'        'Currency'      ' '.
+
+  IF go_container IS INITIAL.
+    PERFORM create_obj.
+    CALL METHOD go_alv_grid->set_table_for_first_display
+      EXPORTING
+        i_save                        = 'A'
+        i_default                     = 'X'
+        is_layout                     = gs_layo
+      CHANGING
+        it_outtab                     = gt_body
+        it_fieldcatalog               = gt_fcat
+*       it_sort                       =
+      EXCEPTIONS
+        invalid_parameter_combination = 1
+        program_error                 = 2
+        too_many_lines                = 3
+        OTHERS                        = 4.
+  ELSE.
+    CALL METHOD go_alv_grid->refresh_table_display.
+  ENDIF.
+
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SET_LAYO
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM set_layo .
+
+  CLEAR : gs_layo.
+  gs_layo-sel_mode   = 'D'.
+  gs_layo-cwidth_opt = 'X'.
+  gs_layo-zebra      = 'X'.
+  gs_layo-totals_bef = 'X'.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  SET_FCAT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_0435   text
+*      -->P_0436   text
+*      -->P_0437   text
+*      -->P_0438   text
+*----------------------------------------------------------------------*
+FORM set_fcat  USING   pv_k   pv_f    pv_c    pv_e.
+
+  gs_fcat-key       = pv_k.
+  gs_fcat-fieldname = pv_f.
+  gs_fcat-coltext   = pv_c.
+  gs_fcat-emphasize = pv_e.
+
+  CASE pv_f.
+    WHEN 'S_DMBTR' OR 'H_DMBTR'.
+      gs_fcat-cfieldname = 'TWAER'.
+     "gs_fcat-currency   = p_twaer.
+      gs_fcat-do_sum     = 'X'.
+      gs_fcat-edit       = 'X'.
+*-- 금액 필드인 경우 참조 테이블 및 필드를 설정 해주어야 한다.
+      gs_fcat-ref_table  = 'COSP'.
+      gs_fcat-ref_field  = 'WTG001'.
+    WHEN 'DMBTR'.
+      gs_fcat-edit = 'X'.
+      gs_fcat-ref_table = 'BSEG'.
+       " DMBTR은 BSEG 테이블에서 동일하게 존재하기 때문에 ref_field 설정을 해 줄 필요가 없다.
+    WHEN 'TWAER'.
+      gs_fcat-no_out     = 'X'.
+  ENDCASE.
+
+  APPEND gs_fcat TO gt_fcat.
+  CLEAR  gs_fcat.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  CREATE_OBJ
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM create_obj .
+
+  CREATE OBJECT go_container
+    EXPORTING
+      repid     = sy-repid
+      dynnr     = sy-dynnr
+      side      = go_container->dock_at_left
+      extension = 3000.
+
+  CREATE OBJECT go_alv_grid
+    EXPORTING
+      i_parent = go_container.
+
+
+ENDFORM.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

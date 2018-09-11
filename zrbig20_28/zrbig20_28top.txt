@@ -1,0 +1,89 @@
+*&---------------------------------------------------------------------*
+*& Include ZRBIG20_28TOP                                     Report ZRBIG20_28
+*&
+*&---------------------------------------------------------------------*
+REPORT zrbig20_28 MESSAGE-ID k5.
+
+CLASS lcl_event_handler DEFINITION DEFERRED.
+
+**********************************************************************
+* TABLES
+**********************************************************************
+TABLES : bkpf.
+
+**********************************************************************
+* Internal table and Work area
+**********************************************************************
+DATA : BEGIN OF gs_body,
+         gjahr TYPE bkpf-gjahr,
+         belnr TYPE bkpf-belnr,
+         bktxt TYPE bkpf-bktxt,
+         shkzg TYPE bsis-shkzg,
+         hkont TYPE bsis-hkont,
+         txt50 TYPE skat-txt50,
+         dmbtr TYPE bsis-dmbtr,
+         waers TYPE bsis-waers,
+       END OF gs_body,
+
+       gs_skat TYPE skat.
+
+DATA : gt_body LIKE TABLE OF gs_body,
+       gt_skat LIKE TABLE OF skat.
+
+**********************************************************************
+* Class instance
+**********************************************************************
+DATA : go_container TYPE REF TO cl_gui_docking_container,
+       go_alv_grid  TYPE REF TO cl_gui_alv_grid,
+
+       go_handler   TYPE REF TO lcl_event_handler.
+
+**********************************************************************
+* Layout
+**********************************************************************
+DATA : gs_layout  TYPE lvc_s_layo.
+
+**********************************************************************
+* Sort
+**********************************************************************
+DATA : gs_sort  TYPE lvc_s_sort,
+       gt_sort  TYPE lvc_t_sort.
+
+**********************************************************************
+* Field catalog
+**********************************************************************
+DATA : gs_fcat TYPE lvc_s_fcat,
+       gt_fcat LIKE TABLE OF gs_fcat.
+
+**********************************************************************
+* Common variable
+**********************************************************************
+DATA : gv_okcode  TYPE sy-ucomm.
+
+
+
+*-- For popup
+**********************************************************************
+* Internal table and Work area
+**********************************************************************
+DATA : gs_bseg  TYPE bseg,
+       gt_bseg  LIKE TABLE OF gs_bseg.
+
+**********************************************************************
+* Class Instance
+**********************************************************************
+DATA : go_pop_container TYPE REF TO cl_gui_custom_container,
+       go_pop_grid      TYPE REF TO cl_gui_alv_grid.
+
+**********************************************************************
+* Layout & Sort & Field Catalog
+**********************************************************************
+DATA : gs_pop_layo  TYPE lvc_s_layo,
+       gs_pop_sort  TYPE lvc_s_sort,
+       gt_pop_sort  LIKE TABLE OF gs_pop_sort,
+
+       gs_pop_fcat  TYPE lvc_s_fcat,
+       gt_pop_fcat  LIKE TABLE OF gs_pop_fcat.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750

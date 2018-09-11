@@ -1,0 +1,117 @@
+*&---------------------------------------------------------------------*
+*&  Include           ZRBIG20_09F01
+*&---------------------------------------------------------------------*
+*&---------------------------------------------------------------------*
+*&      Form  SET_INIT_VALUE
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM set_init_value .
+
+  p_carrid = 'LH'.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  GET_BASE_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM get_base_data .
+
+
+  CLEAR : gt_airline, gs_airline.
+
+*-- Execute join query
+  SELECT a~carrid connid carrname cityfrom cityto url
+  INTO CORRESPONDING FIELDS OF TABLE gt_airline
+  FROM scarr AS a INNER JOIN spfli AS b
+*-- Set join condition
+  ON a~carrid EQ b~carrid
+*-- Set verify condition (조회 조건)
+  WHERE a~carrid EQ p_carrid
+  AND   connid IN s_connid.
+
+" carrid 의 경우 두 table 모두 가지고 있기 때문에 소속을 확실하게 명시하지 않으면 error!
+" 따라서 a~ 또는 b~ 를 이용해서 carrid의 소속을 명시해준다.
+" 그 외 필드의 경우 각 테이블에 독립적으로 존재하기 때문에 굳이 소속을 명시해주지 않아도 된다.
+
+  IF gt_airline IS INITIAL.  "Data가 한 건도 없다면~
+    MESSAGE s037(K5) DISPLAY LIKE 'E'.
+    STOP.
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  DISPLAY_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM display_data .
+
+     LOOP AT gt_airline INTO gs_airline.
+
+      WRITE :/
+        gs_airline-carrid,   gs_airline-connid, gs_airline-carrname,
+        gs_airline-cityfrom, gs_airline-cityto, gs_airline-url.
+
+     ENDLOOP.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  GET_BOOKING_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM get_booking_data .
+
+   CLEAR : gs_flight, gt_flight.
+
+    SELECT a~carrid a~connid b~fldate bookid price planetype customid
+           wunit  class
+    INTO  CORRESPONDING FIELDS OF TABLE gt_flight
+    FROM  sflight AS a INNER JOIN sbook AS b
+    ON  a~carrid EQ b~carrid
+    AND a~connid EQ b~connid
+    AND a~fldate EQ b~fldate
+    WHERE a~carrid   EQ p_carrid
+    AND   a~connid   IN s_connid.
+
+    IF gt_flight IS INITIAL.
+      MESSAGE s037(K5) DISPLAY LIKE 'E'.
+      STOP.
+    ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  DISPLAY_BOOKING_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM display_booking_data .
+    LOOP AT gt_flight INTO gs_flight.
+
+       WRITE :/
+        gs_flight-carrid,   gs_flight-connid, gs_flight-fldate,
+        gs_flight-bookid,   gs_flight-price,  gs_flight-planetype,
+        gs_flight-customid, gs_flight-wunit,  gs_flight-class.
+
+    ENDLOOP.
+ENDFORM.
+
+----------------------------------------------------------------------------------
+Extracted by Direct Download Enterprise version 1.3.1 - E.G.Mellodew. 1998-2005 UK. Sap Release 750
